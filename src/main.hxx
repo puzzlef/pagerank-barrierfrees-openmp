@@ -20,6 +20,6 @@
 #include "dynamic.hxx"
 #include "pagerank.hxx"
 #include "pagerankSeq.hxx"
-#include "pagerankMonolithicSeq.hxx"
 #include "pagerankOmp.hxx"
+#include "pagerankMonolithicSeq.hxx"
 #include "pagerankMonolithicOmp.hxx"
