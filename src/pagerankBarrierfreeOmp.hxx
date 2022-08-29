@@ -26,6 +26,7 @@ int pagerankBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const 
   // Ordered approach
   int TS = omp_get_max_threads();
   int DN = ceilDiv(n, TS);
+  #pragma omp parallel for schedule(static, 1)
   for (int t=0; t<TS; t++) {
     int ti = i + t*DN;
     int tI = min(ti + DN, i + n);
