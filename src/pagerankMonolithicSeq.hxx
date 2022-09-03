@@ -16,7 +16,7 @@ using std::swap;
 // PAGERANK-LOOP
 // -------------
 
-template <bool O, bool D, class T>
+template <bool O, bool D, class T, bool F=false>
 int pagerankMonolithicSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<int>& vfrom, const vector<int>& efrom, const vector<int>& vdata, int i, int n, int N, T p, T E, int L, int EF) {
   int l = 0;
   // Unordered approach
@@ -32,7 +32,7 @@ int pagerankMonolithicSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const v
   while (O && l<L) {
     T c0 = D? pagerankTeleport(r, vdata, N, p) : (1-p)/N;
     pagerankCalculateOrderedU(a, r, f, vfrom, efrom, i, n, c0);  // update ranks of vertices
-    T el = pagerankError(a, i, n, EF); ++l;            // compare previous and current ranks
+    T el = pagerankError(a, F? 0:i, F? N:n, EF); ++l;  // compare previous and current ranks
     if (el<E) break;                                   // check tolerance
   }
   return l;

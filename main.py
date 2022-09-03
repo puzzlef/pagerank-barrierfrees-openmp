@@ -1,7 +1,7 @@
-# https://www.kaggle.com/wolfram77/puzzlef-pagerank-ordered-openmp-barrier-vs-barrierfree
+# https://www.kaggle.com/wolfram77/puzzlef-pagerank-barrierfree-openmp-adjust-tolerance
 import os
 from IPython.display import FileLink
-src="pagerank-ordered-openmp-barrier-vs-barrierfree"
+src="pagerank-barrierfree-openmp-adjust-tolerance"
 inp="/kaggle/input/graphs"
 out="{}.txt".format(src)
 !printf "" > "$out"

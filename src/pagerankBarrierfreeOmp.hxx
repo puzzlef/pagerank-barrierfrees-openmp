@@ -26,13 +26,11 @@ int pagerankBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const 
   // Ordered approach
   int TS = omp_get_max_threads();
   int DN = ceilDiv(n, TS);
-  #pragma omp parallel for schedule(static, 1)
+  #pragma omp parallel for schedule(static, 1) reduction(+:l)
   for (int t=0; t<TS; t++) {
-    int ti = i + t*DN;
-    int tI = min(ti + DN, i + n);
-    int tn = tI - ti;
-    int tl = pagerankMonolithicSeqLoopU<O, D, T>(a, r, c, f, vfrom, efrom, vdata, ti, tn, N, p, E, L, EF);
-    l += tl * tn/n;
+    int  i1 = i+t*DN, I1 = min(i1+DN, i+n), n1 = I1-i1;
+    int  l1 = pagerankMonolithicSeqLoopU<O, D, T, true>(a, r, c, f, vfrom, efrom, vdata, i1, n1, N, p, E, L, EF);
+    l += l1 * n1/float(n);
   }
   return int(l + 0.5f);
 }
