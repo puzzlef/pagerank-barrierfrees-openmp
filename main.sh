@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-src="pagerank-barrierfree-openmp-adjust-tolerance"
+src="pagerank-barrierfree-openmp-vs-threads"
 out="/home/resources/Documents/subhajit/$src.log"
 ulimit -s unlimited
 printf "" > "$out"

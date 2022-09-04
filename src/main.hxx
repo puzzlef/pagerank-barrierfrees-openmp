@@ -24,3 +24,4 @@
 #include "pagerankMonolithicSeq.hxx"
 #include "pagerankMonolithicOmp.hxx"
 #include "pagerankBarrierfreeOmp.hxx"
+#include "pagerankBarrierfreeThd.hxx"
