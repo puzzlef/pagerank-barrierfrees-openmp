@@ -123,7 +123,8 @@ $ ...
 <br>
 
 
-[![](https://i.imgur.com/50yaKL7.jpg)](https://www.youtube.com/watch?v=g2tMcMQqSbA)<br>
+[![](https://i.imgur.com/6UYGStl.jpg)](https://www.youtube.com/watch?v=2k2orAjC4aw)<br>
+[![DOI](https://zenodo.org/badge/532185741.svg)](https://zenodo.org/badge/latestdoi/532185741)
 
 
 [(1)]: https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.38.5427
