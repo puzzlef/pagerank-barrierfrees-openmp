@@ -121,6 +121,7 @@ $ ...
 
 
 [![](https://i.imgur.com/cdNyVYm.jpg)](https://www.deviantart.com/jocelynminions/art/Sonic-Vs-Knuckles-Sonic-Movie2-906726255)<br>
+[![DOI](https://zenodo.org/badge/532610283.svg)](https://zenodo.org/badge/latestdoi/532610283)
 
 
 [(1)]: https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.38.5427
