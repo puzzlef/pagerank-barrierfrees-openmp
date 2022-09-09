@@ -48,16 +48,16 @@ int pagerankBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const 
 // @param o  options {damping=0.85, tolerance=1e-6, maxIterations=500}
 // @returns {ranks, iterations, time}
 template <bool O, bool D, bool F, class G, class H, class T=float>
-PagerankResult<T> pagerankBarrierfreeOmp(const G& x, const H& xt, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}) {
+PagerankResult<T> pagerankBarrierfreeOmp(const G& x, const H& xt, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
   int  N  = xt.order();  if (N==0) return PagerankResult<T>::initial(xt, q);
-  auto ks = vertexKeys(xt);
+  auto ks = pagerankVertices(x, xt, o, C);
   return pagerankOmp(xt, ks, 0, N, pagerankBarrierfreeOmpLoopU<O, D, F, T>, q, o);
 }
 
 template <bool O, bool D, bool F, class G, class T=float>
-PagerankResult<T> pagerankBarrierfreeOmp(const G& x, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}) {
+PagerankResult<T> pagerankBarrierfreeOmp(const G& x, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
   auto xt = transposeWithDegree(x);
-  return pagerankBarrierfreeOmp<O, D, F>(x, xt, q, o);
+  return pagerankBarrierfreeOmp<O, D, F>(x, xt, q, o, C);
 }
 
 
@@ -67,15 +67,15 @@ PagerankResult<T> pagerankBarrierfreeOmp(const G& x, const vector<T> *q=nullptr,
 // ------------------
 
 template <bool O, bool D, bool F, class G, class H, class T=float>
-PagerankResult<T> pagerankBarrierfreeOmpDynamic(const G& x, const H& xt, const G& y, const H& yt, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}) {
-  int  N = yt.order();                             if (N==0) return PagerankResult<T>::initial(yt, q);
-  auto [ks, n] = dynamicInVertices(x, xt, y, yt);  if (n==0) return PagerankResult<T>::initial(yt, q);
+PagerankResult<T> pagerankBarrierfreeOmpDynamic(const G& x, const H& xt, const G& y, const H& yt, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
+  int  N = yt.order();                                         if (N==0) return PagerankResult<T>::initial(yt, q);
+  auto [ks, n] = pagerankDynamicVertices(x, xt, y, yt, o, C);  if (n==0) return PagerankResult<T>::initial(yt, q);
   return pagerankOmp(yt, ks, 0, n, pagerankBarrierfreeOmpLoopU<O, D, F, T>, q, o);
 }
 
 template <bool O, bool D, bool F, class G, class T=float>
-PagerankResult<T> pagerankBarrierfreeOmpDynamic(const G& x, const G& y, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}) {
+PagerankResult<T> pagerankBarrierfreeOmpDynamic(const G& x, const G& y, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
   auto xt = transposeWithDegree(x);
   auto yt = transposeWithDegree(y);
-  return pagerankBarrierfreeOmpDynamic<O, D, F>(x, xt, y, yt, q, o);
+  return pagerankBarrierfreeOmpDynamic<O, D, F>(x, xt, y, yt, q, o, C);
 }
