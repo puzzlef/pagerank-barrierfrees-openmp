@@ -64,13 +64,14 @@ struct PagerankResult {
 
 template <class G>
 struct PagerankData {
+  using K = typename G::key_type;
+  vector2d<K> components;
   G blockgraph;
   G blockgraphTranspose;
-  vector2d<int> components;
 };
 
-template <class G>
-auto blockgraphD(const G& x, const vector2d<int>& cs, const PagerankData<G> *D) {
+template <class G, class K>
+auto blockgraphD(const G& x, const vector2d<K>& cs, const PagerankData<G> *D) {
   return D? D->blockgraph : blockgraph(x, cs);
 }
 

@@ -19,18 +19,20 @@ using std::swap;
 
 template <class G, class H, class T>
 auto pagerankVertices(const G& x, const H& xt, const PagerankOptions<T>& o, const PagerankData<G> *D=nullptr) {
+  using K = typename G::key_type;
   if (!o.splitComponents) return vertexKeys(xt);
-  return join<int>(componentsD(x, xt, D));
+  return joinValuesVector(componentsD(x, xt, D));
 }
 
 
 template <class G, class H, class T>
 auto pagerankDynamicVertices(const G& x, const H& xt, const G& y, const H& yt, const PagerankOptions<T>& o, const PagerankData<G> *D=nullptr) {
+  using K = typename G::key_type;
   if (!o.splitComponents) return dynamicInVertices(x, xt, y, yt);
   const auto& cs = componentsD(y, yt, D);
   const auto& b  = blockgraphD(y, cs, D);
   auto [is, n] = dynamicInComponentIndices(x, xt, y, yt, cs, b);
-  auto ks = joinAt<int>(cs, sliceIterable(is, 0, n)); size_t nv = ks.size();
+  auto ks = joinAt<K>(cs, sliceIterable(is, 0, n)); size_t nv = ks.size();
   joinAt(ks, cs, sliceIterable(is, n));
   return make_pair(ks, nv);
 }
@@ -43,27 +45,30 @@ auto pagerankDynamicVertices(const G& x, const H& xt, const G& y, const H& yt, c
 
 template <class G, class H, class T>
 auto pagerankComponents(const G& x, const H& xt, const PagerankOptions<T>& o, const PagerankData<G> *D=nullptr) {
-  if (!o.splitComponents) return vector2d<int> {vertexKeys(xt)};
+  using K = typename G::key_type;
+  if (!o.splitComponents) return vector2d<K> {vertexKeys(xt)};
   return componentsD(x, xt, D);
 }
 
 
 template <class G, class H>
 auto pagerankDynamicComponentsDefault(const G& x, const H& xt, const G& y, const H& yt) {
-  vector2d<int> a;
+  using K = typename G::key_type;
+  vector2d<K> a;
   auto [ks, n] = dynamicInVertices(x, xt, y, yt);
-  a.push_back(vector<int>(ks.begin(), ks.begin()+n));
-  a.push_back(vector<int>(ks.begin()+n, ks.end()));
+  a.push_back(vector<K>(ks.begin(), ks.begin()+n));
+  a.push_back(vector<K>(ks.begin()+n, ks.end()));
   return make_pair(a, size_t(1));
 }
 
 template <class G, class H, class T>
 auto pagerankDynamicComponentsSplit(const G& x, const H& xt, const G& y, const H& yt, const PagerankOptions<T>& o, const PagerankData<G> *D=nullptr) {
+  using K = typename G::key_type;
   const auto& cs = componentsD(y, yt, D);
   const auto& b  = blockgraphD(y, cs, D);
   auto [is, n] = dynamicInComponentIndices(x, xt, y, yt, cs, b);
-  vector2d<int> a;
-  for (int i : is)
+  vector2d<K> a;
+  for (auto i : is)
     a.push_back(cs[i]);
   return make_pair(a, n);
 }
