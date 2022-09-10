@@ -32,8 +32,12 @@ void runPagerank(const G& x, const H& xt, int repeat) {
 
   // Find Pagerank data.
   auto cs  = components(x, xt);
+  auto b   = blockgraph(x, cs);
+  auto bt  = transpose(b);
+  auto gs  = levelwiseComponentsFrom(cs, b, bt);
   printf("- components: %zu\n", cs.size());
-  PagerankData<G> C {move(cs)};
+  printf("- blockgraph-levels: %d\n", gs.size());
+  PagerankData<G> C {move(cs), move(b), move(bt)};
 
   // Use Li-norm for convergence check.
   for (float tolerance=1e-1; tolerance>=1e-15; tolerance/=10) {
