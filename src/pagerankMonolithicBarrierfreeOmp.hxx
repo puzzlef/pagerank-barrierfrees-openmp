@@ -19,16 +19,16 @@ using std::min;
 // PAGERANK-LOOP
 // -------------
 
-template <bool O, bool D, bool F, class T>
-int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<int>& vfrom, const vector<int>& efrom, const vector<int>& vdata, int i, int n, int N, T p, T E, int L, int EF) {
+template <bool O, bool D, bool F, class K, class OK, class T>
+int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<OK>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF) {
   float l = 0;
   if (!O) return 0;
   // Ordered approach
   int TS = omp_get_max_threads();
-  int DN = ceilDiv(n, TS);
+  K   DN = ceilDiv(n, TS);
   #pragma omp parallel for schedule(static, 1) reduction(+:l)
   for (int t=0; t<TS; t++) {
-    int  i1 = i+t*DN, I1 = min(i1+DN, i+n), n1 = I1-i1;
+    K    i1 = i+t*DN, I1 = min(i1+DN, i+n), n1 = I1-i1;
     int  l1 = pagerankMonolithicSeqLoopU<O, D, T, F>(a, r, c, f, vfrom, efrom, vdata, i1, n1, N, p, E, L, EF);
     l += l1 * n1/float(n);
   }
@@ -49,9 +49,10 @@ int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>&
 // @returns {ranks, iterations, time}
 template <bool O, bool D, bool F, class G, class H, class T=float>
 PagerankResult<T> pagerankMonolithicBarrierfreeOmp(const G& x, const H& xt, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
-  int  N  = xt.order();  if (N==0) return PagerankResult<T>::initial(xt, q);
+  using K = typename G::key_type;
+  K    N  = xt.order();  if (N==0) return PagerankResult<T>::initial(xt, q);
   auto ks = pagerankVertices(x, xt, o, C);
-  return pagerankOmp(xt, ks, 0, N, pagerankMonolithicBarrierfreeOmpLoopU<O, D, F, T>, q, o);
+  return pagerankOmp(xt, ks, K(0), N, pagerankMonolithicBarrierfreeOmpLoopU<O, D, F, T>, q, o);
 }
 
 template <bool O, bool D, bool F, class G, class T=float>
@@ -68,9 +69,10 @@ PagerankResult<T> pagerankMonolithicBarrierfreeOmp(const G& x, const vector<T> *
 
 template <bool O, bool D, bool F, class G, class H, class T=float>
 PagerankResult<T> pagerankMonolithicBarrierfreeOmpDynamic(const G& x, const H& xt, const G& y, const H& yt, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
-  int  N = yt.order();                                         if (N==0) return PagerankResult<T>::initial(yt, q);
+  using K = typename G::key_type;
+  K     N = yt.order();                                        if (N==0) return PagerankResult<T>::initial(yt, q);
   auto [ks, n] = pagerankDynamicVertices(x, xt, y, yt, o, C);  if (n==0) return PagerankResult<T>::initial(yt, q);
-  return pagerankOmp(yt, ks, 0, n, pagerankMonolithicBarrierfreeOmpLoopU<O, D, F, T>, q, o);
+  return pagerankOmp(yt, ks, K(0), n, pagerankMonolithicBarrierfreeOmpLoopU<O, D, F, T>, q, o);
 }
 
 template <bool O, bool D, bool F, class G, class T=float>

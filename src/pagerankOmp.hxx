@@ -18,12 +18,12 @@ using std::swap;
 // ---------------
 // For contribution factors of vertices (unchanging).
 
-template <class T>
-void pagerankFactorOmpW(vector<T>& a, const vector<int>& vdata, int i, int n, T p) {
+template <class K, class T>
+void pagerankFactorOmpW(vector<T>& a, const vector<K>& vdata, K i, K n, T p) {
   if (n<SIZE_MIN_OMPM) { pagerankFactorW(a, vdata, i, n, p); return; }
   #pragma omp parallel for schedule(auto)
-  for (int u=i; u<i+n; u++) {
-    int d = vdata[u];
+  for (K u=i; u<i+n; u++) {
+    K  d = vdata[u];
     a[u] = d>0? p/d : 0;
   }
 }
@@ -35,12 +35,12 @@ void pagerankFactorOmpW(vector<T>& a, const vector<int>& vdata, int i, int n, T 
 // -----------------
 // For teleport contribution from vertices (inc. dead ends).
 
-template <class T>
-T pagerankTeleportOmp(const vector<T>& r, const vector<int>& vdata, int N, T p) {
+template <class K, class T>
+T pagerankTeleportOmp(const vector<T>& r, const vector<K>& vdata, K N, T p) {
   if (N<SIZE_MIN_OMPR) return pagerankTeleport(r, vdata, N, p);
   T a = (1-p)/N;
   #pragma omp parallel for schedule(auto) reduction(+:a)
-  for (int u=0; u<N; u++)
+  for (K u=0; u<N; u++)
     if (vdata[u] == 0) a += p*r[u]/N;
   return a;
 }
@@ -52,21 +52,21 @@ T pagerankTeleportOmp(const vector<T>& r, const vector<int>& vdata, int N, T p) 
 // ------------------
 // For rank calculation from in-edges.
 
-template <class T>
-void pagerankCalculateOmpW(vector<T>& a, const vector<T>& c, const vector<int>& vfrom, const vector<int>& efrom, int i, int n, T c0) {
+template <class K, class OK, class T>
+void pagerankCalculateOmpW(vector<T>& a, const vector<T>& c, const vector<OK>& vfrom, const vector<K>& efrom, K i, K n, T c0) {
   if (n<SIZE_MIN_OMPM) { pagerankCalculateW(a, c, vfrom, efrom, i, n, c0); return; }
   #pragma omp parallel for schedule(dynamic, 2048)
-  for (int v=i; v<i+n; v++)
+  for (K v=i; v<i+n; v++)
     a[v] = c0 + sumValuesAt(c, sliceIterable(efrom, vfrom[v], vfrom[v+1]));
 }
 
-template <class T>
-void pagerankCalculateOrderedOmpU(vector<T>& e, vector<T>& r, const vector<T>& f, const vector<int>& vfrom, const vector<int>& efrom, int i, int n, T c0) {
+template <class K, class OK, class T>
+void pagerankCalculateOrderedOmpU(vector<T>& e, vector<T>& r, const vector<T>& f, const vector<OK>& vfrom, const vector<K>& efrom, K i, K n, T c0) {
   if (n<SIZE_MIN_OMPM) { pagerankCalculateOrderedU(e, r, f, vfrom, efrom, i, n, c0); return; }
   #pragma omp parallel for schedule(dynamic, 2048)
-  for (int v=i; v<i+n; v++) {
+  for (K v=i; v<i+n; v++) {
     T a = c0;
-    for (int u : sliceIterable(efrom, vfrom[v], vfrom[v+1]))
+    for (K u : sliceIterable(efrom, vfrom[v], vfrom[v+1]))
       a += f[u] * r[u];
     e[v] = a - r[v];
     r[v] = a;
@@ -80,8 +80,8 @@ void pagerankCalculateOrderedOmpU(vector<T>& e, vector<T>& r, const vector<T>& f
 // --------------
 // For convergence check.
 
-template <class T>
-T pagerankErrorOmp(const vector<T>& x, const vector<T>& y, int i, int N, int EF) {
+template <class K, class T>
+T pagerankErrorOmp(const vector<T>& x, const vector<T>& y, K i, K N, int EF) {
   switch (EF) {
     case 1:  return l1NormOmp(x, y, i, N);
     case 2:  return l2NormOmp(x, y, i, N);
@@ -89,8 +89,8 @@ T pagerankErrorOmp(const vector<T>& x, const vector<T>& y, int i, int N, int EF)
   }
 }
 
-template <class T>
-T pagerankErrorOmp(const vector<T>& x, int i, int N, int EF) {
+template <class K, class T>
+T pagerankErrorOmp(const vector<T>& x, K i, K N, int EF) {
   switch (EF) {
     case 1:  return l1NormOmp(x, i, N);
     case 2:  return l2NormOmp(x, i, N);
@@ -106,14 +106,16 @@ T pagerankErrorOmp(const vector<T>& x, int i, int N, int EF) {
 // For Monolithic / Componentwise PageRank.
 
 template <class H, class J, class M, class FL, class T=float>
-PagerankResult<T> pagerankOmp(const H& xt, const J& ks, int i, const M& ns, FL fl, const vector<T> *q, const PagerankOptions<T>& o) {
-  int  N  = xt.order();
+PagerankResult<T> pagerankOmp(const H& xt, const J& ks, size_t i, const M& ns, FL fl, const vector<T> *q, const PagerankOptions<T>& o) {
+  using K  = typename G::key_type;
+  using OK = K;  // offset to key type
+  K    N  = xt.order();
   T    p  = o.damping;
   T    E  = o.tolerance;
   int  L  = o.maxIterations, l = 0;
   int  EF = o.toleranceNorm;
-  auto vfrom = sourceOffsetsAs(xt, ks, int());
-  auto efrom = destinationIndicesAs(xt, ks, int());
+  auto vfrom = sourceOffsetsAs(xt, ks, OK());
+  auto efrom = destinationIndicesAs(xt, ks, K());
   auto vdata = vertexData(xt, ks);
   vector<T> a(N), r(N), c(N), f(N), qc;
   if (q) qc = compressContainer(xt, *q, ks);
