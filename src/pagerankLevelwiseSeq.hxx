@@ -24,8 +24,8 @@ using std::move;
 // PAGERANK-LOOP
 // -------------
 
-template <bool O, bool D, class K, class T, class J>
-int pagerankLevelwiseSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, const J& ns, K N, T p, T E, int L, int EF) {
+template <bool O, bool D, class K, class T, class J, bool F=false>
+int pagerankLevelwiseSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, const J& ns, K N, T p, T E, int L, int EF, K EI=K(), K EN=K()) {
   float l = 0;
   // Cannot handle graph with dead-ends.
   if (D) return 0;
@@ -33,7 +33,7 @@ int pagerankLevelwiseSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const ve
   for (K n : ns) {
     if (n<=0) { i += -n; continue; }
     T    E1 = EF<=2? E*n/N : E;
-    int  l1 = pagerankMonolithicSeqLoopU<O, D, K, T>(a, r, c, f, vfrom, efrom, vdata, i, n, N, p, E1, L, EF);
+    int  l1 = pagerankMonolithicSeqLoopU<O, D>(a, r, c, f, vfrom, efrom, vdata, i, n, N, p, E1, L, EF);
     l += l1 * n/float(N);
     i += n;
     swap(a, r);

@@ -17,24 +17,26 @@ using std::swap;
 // PAGERANK-LOOP
 // -------------
 
-template <bool O, bool D, class K, class T>
-int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF) {
+template <bool O, bool D, class K, class T, bool F=false>
+int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF, K EI=K(), K EN=K()) {
   int l = 0;
+  if (F) EI = 0;
+  if (F) EN = N;
   // Unordered approach
   while (!O && l<L) {
     T c0 = D? pagerankTeleportOmp(r, vdata, N, p) : (1-p)/N;
-    pagerankCalculateOmpW(a, c, vfrom, efrom, i, n, c0);  // update ranks of vertices
-    multiplyValuesOmpW(c, a, f, i, n);                    // update partial contributions (c)
-    T el = pagerankErrorOmp(a, r, i, n, EF);              // compare previous and current ranks
-    swap(a, r); ++l;                                      // final ranks in (r)
-    if (el<E) break;                                      // check tolerance
+    pagerankCalculateOmpW(a, c, vfrom, efrom, i, n, c0);    // update ranks of vertices
+    multiplyValuesOmpW(c, a, f, i, n);                      // update partial contributions (c)
+    T el = pagerankErrorOmp(a, r, EN? EI:i, EN? EN:n, EF);  // compare previous and current ranks
+    swap(a, r); ++l;                                        // final ranks in (r)
+    if (el<E) break;                                        // check tolerance
   }
   // Ordered approach
   while (O && l<L) {
     T c0 = D? pagerankTeleportOmp(r, vdata, N, p) : (1-p)/N;
     pagerankCalculateOrderedOmpU(a, r, f, vfrom, efrom, i, n, c0);  // update ranks of vertices
-    T el = pagerankErrorOmp(a, i, n, EF); ++l;            // compare previous and current ranks
-    if (el<E) break;                                      // check tolerance
+    T el = pagerankErrorOmp(a, EN? EI:i, EN? EN:n, EF); ++l;        // compare previous and current ranks
+    if (el<E) break;                                                // check tolerance
   }
   return l;
 }
