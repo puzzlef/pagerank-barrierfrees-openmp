@@ -1,6 +1,8 @@
 Performance of static vs dynamic barrier-free iterations in [OpenMP]-based
 ordered monolithic [PageRank algorithm] for [link analysis].
 
+`TODO`
+
 **Unordered PageRank** is the *standard* approach of PageRank computation (as
 described in the original paper by Larry Page et al. [(1)]), where *two*
 *different rank vectors* are maintained; one representing the *current* ranks of
@@ -233,7 +235,6 @@ $ ...
 
 
 [![](https://i.imgur.com/Fg73quJ.jpg)](https://www.youtube.com/watch?v=IY1VxuN7A14)<br>
-[![DOI](https://zenodo.org/badge/534765115.svg)](https://zenodo.org/badge/latestdoi/534765115)
 
 
 [(1)]: https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.38.5427
