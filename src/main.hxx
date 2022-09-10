@@ -23,4 +23,7 @@
 #include "pagerankOmp.hxx"
 #include "pagerankMonolithicSeq.hxx"
 #include "pagerankMonolithicOmp.hxx"
-#include "pagerankBarrierfreeOmp.hxx"
+#include "pagerankMonolithicBarrierfreeOmp.hxx"
+#include "pagerankLevelwiseSeq.hxx"
+#include "pagerankLevelwiseOmp.hxx"
+#include "pagerankLevelwiseBarrierfreeOmp.hxx"
