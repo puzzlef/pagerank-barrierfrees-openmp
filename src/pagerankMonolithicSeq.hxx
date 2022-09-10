@@ -16,8 +16,8 @@ using std::swap;
 // PAGERANK-LOOP
 // -------------
 
-template <bool O, bool D, class K, class OK, class T, bool F=false>
-int pagerankMonolithicSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<OK>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF) {
+template <bool O, bool D, class K, class T, bool F=false>
+int pagerankMonolithicSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF) {
   int l = 0;
   // Unordered approach
   while (!O && l<L) {
@@ -55,7 +55,7 @@ PagerankResult<T> pagerankMonolithicSeq(const G& x, const H& xt, const vector<T>
   using K = typename G::key_type;
   K    N  = xt.order();  if (N==0) return PagerankResult<T>::initial(xt, q);
   auto ks = pagerankVertices(x, xt, o, C);
-  return pagerankSeq(xt, ks, K(0), N, pagerankMonolithicSeqLoopU<O, D, T>, q, o);
+  return pagerankSeq(xt, ks, K(0), N, pagerankMonolithicSeqLoopU<O, D, K, T>, q, o);
 }
 
 template <bool O, bool D, class G, class T=float>
@@ -75,7 +75,7 @@ PagerankResult<T> pagerankMonolithicSeqDynamic(const G& x, const H& xt, const G&
   using K = typename G::key_type;
   K    N  = yt.order();                                        if (N==0) return PagerankResult<T>::initial(yt, q);
   auto [ks, n] = pagerankDynamicVertices(x, xt, y, yt, o, C);  if (n==0) return PagerankResult<T>::initial(yt, q);
-  return pagerankSeq(yt, ks, K(0), n, pagerankMonolithicSeqLoopU<O, D, T>, q, o);
+  return pagerankSeq(yt, ks, K(0), n, pagerankMonolithicSeqLoopU<O, D, K, T>, q, o);
 }
 
 template <bool O, bool D, class G, class T=float>

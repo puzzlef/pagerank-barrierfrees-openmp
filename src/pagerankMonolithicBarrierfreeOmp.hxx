@@ -19,8 +19,8 @@ using std::min;
 // PAGERANK-LOOP
 // -------------
 
-template <bool O, bool D, bool F, class K, class OK, class T>
-int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<OK>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF) {
+template <bool O, bool D, bool F, class K, class T>
+int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF) {
   float l = 0;
   if (!O) return 0;
   // Ordered approach
@@ -29,7 +29,7 @@ int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>&
   #pragma omp parallel for schedule(static, 1) reduction(+:l)
   for (int t=0; t<TS; t++) {
     K    i1 = i+t*DN, I1 = min(i1+DN, i+n), n1 = I1-i1;
-    int  l1 = pagerankMonolithicSeqLoopU<O, D, T, F>(a, r, c, f, vfrom, efrom, vdata, i1, n1, N, p, E, L, EF);
+    int  l1 = pagerankMonolithicSeqLoopU<O, D, K, T, F>(a, r, c, f, vfrom, efrom, vdata, i1, n1, N, p, E, L, EF);
     l += l1 * n1/float(n);
   }
   return int(l + 0.5f);
@@ -52,7 +52,7 @@ PagerankResult<T> pagerankMonolithicBarrierfreeOmp(const G& x, const H& xt, cons
   using K = typename G::key_type;
   K    N  = xt.order();  if (N==0) return PagerankResult<T>::initial(xt, q);
   auto ks = pagerankVertices(x, xt, o, C);
-  return pagerankOmp(xt, ks, K(0), N, pagerankMonolithicBarrierfreeOmpLoopU<O, D, F, T>, q, o);
+  return pagerankOmp(xt, ks, K(0), N, pagerankMonolithicBarrierfreeOmpLoopU<O, D, F, K, T>, q, o);
 }
 
 template <bool O, bool D, bool F, class G, class T=float>
@@ -72,7 +72,7 @@ PagerankResult<T> pagerankMonolithicBarrierfreeOmpDynamic(const G& x, const H& x
   using K = typename G::key_type;
   K     N = yt.order();                                        if (N==0) return PagerankResult<T>::initial(yt, q);
   auto [ks, n] = pagerankDynamicVertices(x, xt, y, yt, o, C);  if (n==0) return PagerankResult<T>::initial(yt, q);
-  return pagerankOmp(yt, ks, K(0), n, pagerankMonolithicBarrierfreeOmpLoopU<O, D, F, T>, q, o);
+  return pagerankOmp(yt, ks, K(0), n, pagerankMonolithicBarrierfreeOmpLoopU<O, D, F, K, T>, q, o);
 }
 
 template <bool O, bool D, bool F, class G, class T=float>

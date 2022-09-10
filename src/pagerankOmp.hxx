@@ -52,16 +52,16 @@ T pagerankTeleportOmp(const vector<T>& r, const vector<K>& vdata, K N, T p) {
 // ------------------
 // For rank calculation from in-edges.
 
-template <class K, class OK, class T>
-void pagerankCalculateOmpW(vector<T>& a, const vector<T>& c, const vector<OK>& vfrom, const vector<K>& efrom, K i, K n, T c0) {
+template <class K, class T>
+void pagerankCalculateOmpW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0) {
   if (n<SIZE_MIN_OMPM) { pagerankCalculateW(a, c, vfrom, efrom, i, n, c0); return; }
   #pragma omp parallel for schedule(dynamic, 2048)
   for (K v=i; v<i+n; v++)
     a[v] = c0 + sumValuesAt(c, sliceIterable(efrom, vfrom[v], vfrom[v+1]));
 }
 
-template <class K, class OK, class T>
-void pagerankCalculateOrderedOmpU(vector<T>& e, vector<T>& r, const vector<T>& f, const vector<OK>& vfrom, const vector<K>& efrom, K i, K n, T c0) {
+template <class K, class T>
+void pagerankCalculateOrderedOmpU(vector<T>& e, vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0) {
   if (n<SIZE_MIN_OMPM) { pagerankCalculateOrderedU(e, r, f, vfrom, efrom, i, n, c0); return; }
   #pragma omp parallel for schedule(dynamic, 2048)
   for (K v=i; v<i+n; v++) {
@@ -107,14 +107,13 @@ T pagerankErrorOmp(const vector<T>& x, K i, K N, int EF) {
 
 template <class H, class J, class M, class FL, class T=float>
 PagerankResult<T> pagerankOmp(const H& xt, const J& ks, size_t i, const M& ns, FL fl, const vector<T> *q, const PagerankOptions<T>& o) {
-  using K  = typename G::key_type;
-  using OK = K;  // offset to key type
+  using K = typename H::key_type;
   K    N  = xt.order();
   T    p  = o.damping;
   T    E  = o.tolerance;
   int  L  = o.maxIterations, l = 0;
   int  EF = o.toleranceNorm;
-  auto vfrom = sourceOffsetsAs(xt, ks, OK());
+  auto vfrom = sourceOffsetsAs(xt, ks, K());
   auto efrom = destinationIndicesAs(xt, ks, K());
   auto vdata = vertexData(xt, ks);
   vector<T> a(N), r(N), c(N), f(N), qc;

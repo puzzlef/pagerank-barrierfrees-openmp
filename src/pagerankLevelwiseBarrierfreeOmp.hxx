@@ -24,8 +24,8 @@ using std::move;
 // PAGERANK-LOOP
 // -------------
 
-template <bool O, bool D, bool F, class K, class OK, class T, class J>
-int pagerankLevelwiseBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<OK>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, const J& ns, K N, T p, T E, int L, int EF) {
+template <bool O, bool D, bool F, class K, class T, class J>
+int pagerankLevelwiseBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, const J& ns, K N, T p, T E, int L, int EF) {
   float l = 0;
   // Cannot handle graph with dead-ends.
   if (D) return 0;
@@ -33,7 +33,7 @@ int pagerankLevelwiseBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& 
   for (K n : ns) {
     if (n<=0) { i += -n; continue; }
     T    E1 = EF<=2? E*n/N : E;
-    int  l1 = pagerankMonolithicBarrierfreeOmpLoopU<O, D, F>(a, r, c, f, vfrom, efrom, vdata, i, n, N, p, E1, L, EF);
+    int  l1 = pagerankMonolithicBarrierfreeOmpLoopU<O, D, F, K, T>(a, r, c, f, vfrom, efrom, vdata, i, n, N, p, E1, L, EF);
     l += l1 * n/float(N);
     i += n;
     swap(a, r);
@@ -55,8 +55,7 @@ int pagerankLevelwiseBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& 
 // @returns {ranks, iterations, time}
 template <bool O, bool D, bool F, class G, class H, class T=float>
 PagerankResult<T> pagerankLevelwiseBarrierfreeOmp(const G& x, const H& xt, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
-  using K  = typename G::key_type;
-  using OK = K;
+  using K = typename G::key_type;
   K    N  = xt.order();  if (N==0) return PagerankResult<T>::initial(xt, q);
   const auto& cs = componentsD(x, xt, C);
   const auto& b  = blockgraphD(x, cs, C);
@@ -64,7 +63,7 @@ PagerankResult<T> pagerankLevelwiseBarrierfreeOmp(const G& x, const H& xt, const
   auto gs = levelwiseGroupedComponentsFrom(cs, b, bt);
   auto ns = transformIterable(gs, [&](const auto& g) { return g.size(); });
   auto ks = joinValuesVector(gs);
-  return pagerankOmp(xt, ks, 0, ns, pagerankLevelwiseBarrierfreeOmpLoopU<O, D, F, K, OK, T, decltype(ns)>, q, o);
+  return pagerankOmp(xt, ks, 0, ns, pagerankLevelwiseBarrierfreeOmpLoopU<O, D, F, K, T, decltype(ns)>, q, o);
 }
 template <bool O, bool D, bool F, class G, class T=float>
 PagerankResult<T> pagerankLevelwiseBarrierfreeOmp(const G& x, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
@@ -80,8 +79,7 @@ PagerankResult<T> pagerankLevelwiseBarrierfreeOmp(const G& x, const vector<T> *q
 
 template <bool O, bool D, bool F, class G, class H, class T=float>
 PagerankResult<T> pagerankLevelwiseBarrierfreeOmpDynamic(const G& x, const H& xt, const G& y, const H& yt, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
-  using K  = typename G::key_type;
-  using OK = K;
+  using K = typename G::key_type;
   K    N  = yt.order();  if (N==0) return PagerankResult<T>::initial(yt, q);
   const auto& cs = componentsD(x, xt, C);
   const auto& b  = blockgraphD(x, cs, C);
@@ -92,7 +90,7 @@ PagerankResult<T> pagerankLevelwiseBarrierfreeOmpDynamic(const G& x, const H& xt
   auto gs = joinAt2dVector(cs, ig);
   auto ns = transformIterable(gs, [&](const auto& g) { return g.size(); });
   auto ks = joinValuesVector(gs); joinAtU(ks, cs, sliceIterable(is, n));
-  return pagerankOmp(yt, ks, 0, ns, pagerankLevelwiseBarrierfreeOmpLoop<O, D, F, T, decltype(ns)>, q, o);
+  return pagerankOmp(yt, ks, 0, ns, pagerankLevelwiseBarrierfreeOmpLoopU<O, D, F, K, T, decltype(ns)>, q, o);
 }
 template <bool O, bool D, bool F, class G, class T=float>
 PagerankResult<T> pagerankLevelwiseBarrierfreeOmpDynamic(const G& x, const G& y, const vector<T> *q=nullptr, const PagerankOptions<T>& o={}, const PagerankData<G> *C=nullptr) {
