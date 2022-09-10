@@ -209,7 +209,7 @@ void joinAt(const vector2d<T>& xs, const J& is, vector<T>& a) {
     copyAppend(xs[i], a);
 }
 template <class T, class J>
-inline void joinAtW(vector<T>& a, const vector2d<T>& xs, const J& is) {
+inline void joinAtU(vector<T>& a, const vector2d<T>& xs, const J& is) {
   joinAt(xs, is, a);
 }
 
