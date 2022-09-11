@@ -28,7 +28,7 @@ template <bool O, bool D, class K, class T, class J, bool F=false>
 int pagerankLevelwiseBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, const J& ns, K N, T p, T E, int L, int EF, K EI=K(), K EN=K()) {
   float l = 0;
   // Cannot handle graph with dead-ends.
-  if (D) return 0;
+  if (!O || D) return 0;
   // Process each level unitl convergence.
   for (K n : ns) {
     if (n<=0) { i += -n; continue; }
@@ -36,7 +36,6 @@ int pagerankLevelwiseBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& 
     int  l1 = pagerankMonolithicBarrierfreeOmpLoopU<O, D>(a, r, c, f, vfrom, efrom, vdata, i, n, N, p, E1, L, EF, F? i:K(), F? n:K());
     l += l1 * float(n)/N;
     i += n;
-    swap(a, r);
   }
   return int(l + 0.5f);
 }

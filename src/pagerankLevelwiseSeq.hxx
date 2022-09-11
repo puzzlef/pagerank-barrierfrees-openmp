@@ -36,7 +36,7 @@ int pagerankLevelwiseSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const ve
     int  l1 = pagerankMonolithicSeqLoopU<O, D>(a, r, c, f, vfrom, efrom, vdata, i, n, N, p, E1, L, EF);
     l += l1 * float(n)/N;
     i += n;
-    swap(a, r);
+    if (!O) swap(a, r);
   }
   return int(l + 0.5f);
 }
