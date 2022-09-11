@@ -34,7 +34,7 @@ int pagerankLevelwiseBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& 
     if (n<=0) { i += -n; continue; }
     T    E1 = EF<=2? E*n/N : E;
     int  l1 = pagerankMonolithicBarrierfreeOmpLoopU<O, D>(a, r, c, f, vfrom, efrom, vdata, i, n, N, p, E1, L, EF, F? i:K(), F? n:K());
-    l += l1 * n/float(N);
+    l += l1 * float(n)/N;
     i += n;
     swap(a, r);
   }

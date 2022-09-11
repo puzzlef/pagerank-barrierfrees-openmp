@@ -33,7 +33,7 @@ int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>&
     K    i1 = i+t*DN, I1 = min(i1+DN, i+n), n1 = max(I1-i1, 0);
     if  (n1==0) continue;
     int  l1 = pagerankMonolithicSeqLoopU<O, D>(a, r, c, f, vfrom, efrom, vdata, i1, n1, N, p, E, L, EF, EI, EN);
-    l += l1 * n1/float(n);
+    l += l1 * float(n1)/n;
   }
   return int(l + 0.5f);
 }
