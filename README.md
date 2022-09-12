@@ -157,7 +157,8 @@ $ ...
 <br>
 
 
-[![](https://i.imgur.com/Fg73quJ.jpg)](https://www.youtube.com/watch?v=IY1VxuN7A14)<br>
+[![](https://i.imgur.com/xCXqbfU.jpg)](https://www.youtube.com/watch?v=IY1VxuN7A14)<br>
+[![DOI](https://zenodo.org/badge/534899343.svg)](https://zenodo.org/badge/latestdoi/534899343)
 
 
 [(1)]: https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.38.5427
