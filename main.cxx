@@ -102,7 +102,8 @@ int main(int argc, char **argv) {
   char *file = argv[1];
   int repeat = argc>2? stoi(argv[2]) : 5;
   printf("Loading graph %s ...\n", file);
-  auto x  = readMtxOutDiGraph(file); println(x);
+  OutDiGraph<uint32_t> x;
+  readMtxW(x, file); println(x);
   auto fl = [](auto u) { return true; };
   selfLoopU(x, None(), fl); print(x); printf(" (selfLoopAllVertices)\n");
   auto xt = transposeWithDegree(x);  print(xt); printf(" (transposeWithDegree)\n");
