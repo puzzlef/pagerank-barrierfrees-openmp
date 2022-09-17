@@ -121,7 +121,7 @@ PagerankResult<T> pagerankOmp(const H& xt, const J& ks, size_t i, const M& ns, F
   float t = measureDuration([&]() {
     if (q) copyValuesOmpW(r, qc);  // copy old ranks (qc), if given
     else fillValueOmpU(r, T(1)/N);
-    pagerankFactorOmpW(f, vdata, 0, N, p); multiplyValuesOmpW(c, r, f, 0, N);  // calculate factors (f) and contributions (c)
+    pagerankFactorOmpW(f, vdata, K(0), N, p); multiplyValuesOmpW(c, r, f, 0, N);  // calculate factors (f) and contributions (c)
     l = fl(a, r, c, f, vfrom, efrom, vdata, i, ns, N, p, E, L, EF, K(), K());  // calculate ranks of vertices
   }, o.repeat);
   return {decompressContainer(xt, r, ks), l, t};

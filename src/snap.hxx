@@ -19,7 +19,7 @@ using std::getline;
 template <class G>
 bool readSnapTemporalLineW(G& a, const string& ln, bool sym=false) {
   using K = typename G::key_type;
-  K u, v; int t; stringstream ls(ln);
+  K u, v; size_t t; stringstream ls(ln);
   if (!(ls >> u >> v >> t)) return false;
   a.addEdge(u, v);
   if (sym) a.addEdge(v, u);
