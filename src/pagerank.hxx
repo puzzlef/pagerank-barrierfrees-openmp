@@ -2,6 +2,7 @@
 #include <vector>
 #include <utility>
 #include "_main.hxx"
+#include "components.hxx"
 
 using std::vector;
 using std::move;
@@ -15,13 +16,14 @@ using std::move;
 template <class T>
 struct PagerankOptions {
   int  repeat;
-  int  toleranceNorm;
+  bool splitComponents;
   T    damping;
+  int  toleranceNorm;
   T    tolerance;
   int  maxIterations;
 
-  PagerankOptions(int repeat=1, int toleranceNorm=1, T damping=0.85, T tolerance=1e-6, int maxIterations=500) :
-  repeat(repeat), toleranceNorm(toleranceNorm), damping(damping), tolerance(tolerance), maxIterations(maxIterations) {}
+  PagerankOptions(int repeat=1, bool splitComponents=false, T damping=0.85, int toleranceNorm=1, T tolerance=1e-6, int maxIterations=500) :
+  repeat(repeat), splitComponents(splitComponents), damping(damping), toleranceNorm(toleranceNorm), tolerance(tolerance), maxIterations(maxIterations) {}
 };
 
 
@@ -52,3 +54,33 @@ struct PagerankResult {
     return {a, 0, 0};
   }
 };
+
+
+
+
+// PAGERANK-DATA
+// -------------
+// Using Pagerank Data for performance!
+
+template <class G>
+struct PagerankData {
+  using K = typename G::key_type;
+  vector2d<K> components;
+  G blockgraph;
+  G blockgraphTranspose;
+};
+
+template <class G, class K>
+auto blockgraphD(const G& x, const vector2d<K>& cs, const PagerankData<G> *D) {
+  return D? D->blockgraph : blockgraph(x, cs);
+}
+
+template <class G>
+auto blockgraphTransposeD(const G& b, const PagerankData<G> *D) {
+  return D? D->blockgraphTranspose : transpose(b);
+}
+
+template <class G, class H>
+auto componentsD(const G& x, const H& xt, const PagerankData<G> *D) {
+  return D? D->components : components(x, xt);
+}
