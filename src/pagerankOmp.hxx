@@ -107,12 +107,12 @@ T pagerankErrorOmp(const vector<T>& x, K i, K N, int EF) {
 
 template <class H, class J, class M, class FL, class T=float>
 PagerankResult<T> pagerankOmp(const H& xt, const J& ks, size_t i, const M& ns, FL fl, const vector<T> *q, const PagerankOptions<T>& o) {
-  using K = typename H::key_type;
-  K    N  = xt.order();
-  T    p  = o.damping;
-  T    E  = o.tolerance;
-  int  L  = o.maxIterations, l = 0;
-  int  EF = o.toleranceNorm;
+  using K  = typename H::key_type;
+  K     N  = xt.order();
+  T     p  = o.damping;
+  T     E  = o.tolerance;
+  int   L  = o.maxIterations, l = 0;
+  int   EF = o.toleranceNorm;
   auto vfrom = sourceOffsetsAs(xt, ks, K());
   auto efrom = destinationIndicesAs(xt, ks, K());
   auto vdata = vertexData(xt, ks);

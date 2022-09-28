@@ -15,15 +15,17 @@ using std::move;
 
 template <class T>
 struct PagerankOptions {
-  int  repeat;
-  bool splitComponents;
-  T    damping;
-  int  toleranceNorm;
-  T    tolerance;
-  int  maxIterations;
+  int   repeat;
+  bool  splitComponents;
+  float sleepProbability;
+  int   sleepDurationMs;
+  T     damping;
+  int   toleranceNorm;
+  T     tolerance;
+  int   maxIterations;
 
-  PagerankOptions(int repeat=1, bool splitComponents=false, T damping=0.85, int toleranceNorm=1, T tolerance=1e-6, int maxIterations=500) :
-  repeat(repeat), splitComponents(splitComponents), damping(damping), toleranceNorm(toleranceNorm), tolerance(tolerance), maxIterations(maxIterations) {}
+  PagerankOptions(int repeat=1, bool splitComponents=false, float sleepProbability=0.0f, int sleepDurationMs=0, T damping=0.85, int toleranceNorm=1, T tolerance=1e-6, int maxIterations=500) :
+  repeat(repeat), splitComponents(splitComponents), sleepProbability(sleepProbability), sleepDurationMs(sleepDurationMs), damping(damping), toleranceNorm(toleranceNorm), tolerance(tolerance), maxIterations(maxIterations) {}
 };
 
 
