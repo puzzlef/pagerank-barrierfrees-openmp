@@ -1,14 +1,17 @@
 #pragma once
 #include <vector>
 #include <algorithm>
+#include <chrono>
 #include "_main.hxx"
 #include "vertices.hxx"
 #include "edges.hxx"
 #include "csr.hxx"
 #include "dynamic.hxx"
+#include "random.hxx"
 #include "pagerank.hxx"
 
 using std::vector;
+using std::chrono::milliseconds;
 using std::swap;
 
 
@@ -116,15 +119,22 @@ T pagerankTeleport(const vector<T>& r, const vector<K>& vdata, K N, T p) {
 // ------------------
 // For rank calculation from in-edges.
 
-template <class K, class T>
-void pagerankCalculateW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0) {
-  for (K v=i; v<i+n; v++)
+template <class K, class T, class R>
+void pagerankCalculateW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, R* rnd) {
+  double sp = double(SP)/n;
+  milliseconds sd(SD);
+  for (K v=i; v<i+n; v++) {
+    randomSleepFor(sd, sp, *rnd);
     a[v] = c0 + sumValuesAt(c, sliceIterable(efrom, vfrom[v], vfrom[v+1]));
+  }
 }
 
-template <class K, class T>
-void pagerankCalculateOrderedU(vector<T>& e, vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0) {
+template <class K, class T, class R>
+void pagerankCalculateOrderedU(vector<T>& e, vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, R* rnd) {
+  double sp = double(SP)/n;
+  milliseconds sd(SD);
   for (K v=i; v<i+n; v++) {
+    randomSleepFor(sd, sp, *rnd);
     T a = c0;
     for (K u : sliceIterable(efrom, vfrom[v], vfrom[v+1]))
       a += f[u] * r[u];
@@ -173,16 +183,19 @@ PagerankResult<T> pagerankSeq(const H& xt, const J& ks, size_t i, const M& ns, F
   T     E  = o.tolerance;
   int   L  = o.maxIterations, l = 0;
   int   EF = o.toleranceNorm;
+  float SP = o.sleepProbability;
+  int   SD = o.sleepDurationMs;
   auto vfrom = sourceOffsetsAs(xt, ks, K());
   auto efrom = destinationIndicesAs(xt, ks, K());
   auto vdata = vertexData(xt, ks);
+  auto rnds  = defaultRandomEngines(1);
   vector<T> a(N), r(N), c(N), f(N), qc;
   if (q) qc = compressContainer(xt, *q, ks);
   float t = measureDuration([&]() {
     if (q) copyValuesW(r, qc);   // copy old ranks (qc), if given
     else fillValueU(r, T(1)/N);
-    pagerankFactorW(f, vdata, K(0), N, p); multiplyValuesW(c, r, f, 0, N);           // calculate factors (f) and contributions (c)
-    l = fl(a, r, c, f, vfrom, efrom, vdata, K(i), ns, N, p, E, L, EF, K(), K());  // calculate ranks of vertices
+    pagerankFactorW(f, vdata, K(0), N, p); multiplyValuesW(c, r, f, 0, N);                      // calculate factors (f) and contributions (c)
+    l = fl(a, r, c, f, vfrom, efrom, vdata, rnds[0], K(i), ns, N, p, E, L, EF, SP, SD, K(), K());  // calculate ranks of vertices
   }, o.repeat);
   return {decompressContainer(xt, r, ks), l, t};
 }

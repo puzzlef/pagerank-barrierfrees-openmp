@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <algorithm>
+#include <random>
 #include "_main.hxx"
 #include "transpose.hxx"
 #include "dynamic.hxx"
@@ -8,6 +9,7 @@
 #include "pagerankSeq.hxx"
 
 using std::vector;
+using std::default_random_engine;
 using std::swap;
 
 
@@ -17,14 +19,14 @@ using std::swap;
 // -------------
 
 template <bool O, bool D, class K, class T, bool F=false>
-int pagerankMonolithicSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF, K EI=K(), K EN=K()) {
+int pagerankMonolithicSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, default_random_engine* rnd, K i, K n, K N, T p, T E, int L, int EF, float SP, int SD, K EI=K(), K EN=K()) {
   int l = 0;
   if (F) EI = 0;
   if (F) EN = N;
   // Unordered approach
   while (!O && l<L) {
     T c0 = D? pagerankTeleport(r, vdata, N, p) : (1-p)/N;
-    pagerankCalculateW(a, c, vfrom, efrom, i, n, c0);    // update ranks of vertices
+    pagerankCalculateW(a, c, vfrom, efrom, i, n, c0, SP, SD, rnd);  // update ranks of vertices
     multiplyValuesW(c, a, f, i, n);                      // update partial contributions (c)
     T el = pagerankError(a, r, EN? EI:i, EN? EN:n, EF);  // compare previous and current ranks
     swap(a, r); ++l;                                     // final ranks in (r)
@@ -33,7 +35,7 @@ int pagerankMonolithicSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const v
   // Ordered approach
   while (O && l<L) {
     T c0 = D? pagerankTeleport(r, vdata, N, p) : (1-p)/N;
-    pagerankCalculateOrderedU(a, r, f, vfrom, efrom, i, n, c0);  // update ranks of vertices
+    pagerankCalculateOrderedU(a, r, f, vfrom, efrom, i, n, c0, SP, SD, rnd);  // update ranks of vertices
     T el = pagerankError(a, EN? EI:i, EN? EN:n, EF); ++l;        // compare previous and current ranks
     if (el<E) break;                                             // check tolerance
   }

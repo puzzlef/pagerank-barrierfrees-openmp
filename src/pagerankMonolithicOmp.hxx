@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 #include <algorithm>
+#include <random>
+#include <omp.h>
 #include "_main.hxx"
 #include "transpose.hxx"
 #include "dynamic.hxx"
@@ -9,6 +11,7 @@
 #include "pagerankOmp.hxx"
 
 using std::vector;
+using std::default_random_engine;
 using std::swap;
 
 
@@ -18,14 +21,14 @@ using std::swap;
 // -------------
 
 template <bool O, bool D, class K, class T, bool F=false>
-int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF, K EI=K(), K EN=K()) {
+int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, vector<default_random_engine*>& rnds, K i, K n, K N, T p, T E, int L, int EF, float SP, int SD, K EI=K(), K EN=K()) {
   int l = 0;
   if (F) EI = 0;
   if (F) EN = N;
   // Unordered approach
   while (!O && l<L) {
     T c0 = D? pagerankTeleportOmp(r, vdata, N, p) : (1-p)/N;
-    pagerankCalculateOmpW(a, c, vfrom, efrom, i, n, c0);    // update ranks of vertices
+    pagerankCalculateOmpW(a, c, vfrom, efrom, i, n, c0, SP, SD, rnds);  // update ranks of vertices
     multiplyValuesOmpW(c, a, f, i, n);                      // update partial contributions (c)
     T el = pagerankErrorOmp(a, r, EN? EI:i, EN? EN:n, EF);  // compare previous and current ranks
     swap(a, r); ++l;                                        // final ranks in (r)
@@ -34,7 +37,7 @@ int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const v
   // Ordered approach
   while (O && l<L) {
     T c0 = D? pagerankTeleportOmp(r, vdata, N, p) : (1-p)/N;
-    pagerankCalculateOrderedOmpU(a, r, f, vfrom, efrom, i, n, c0);  // update ranks of vertices
+    pagerankCalculateOrderedOmpU(a, r, f, vfrom, efrom, i, n, c0, SP, SD, rnds);  // update ranks of vertices
     T el = pagerankErrorOmp(a, EN? EI:i, EN? EN:n, EF); ++l;        // compare previous and current ranks
     if (el<E) break;                                                // check tolerance
   }

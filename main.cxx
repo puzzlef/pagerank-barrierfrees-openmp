@@ -32,8 +32,8 @@ void runPagerank(const G& x, const H& xt, int repeat) {
   T damping   = 0.85f;
   T tolerance = 1e-10f;
 
-  for (float sleepProbability=0.0f; sleepProbability<1.01f; sleepProbability+=0.1f) {
-    for (int sleepDurationMs=0, i=0; sleepDurationMs<=1000; sleepDurationMs*=i&1? 2:5) {
+  for (int sleepDurationMs=1, i=0; sleepDurationMs<=1000; sleepDurationMs*=++i&1? 5:2) {
+    for (float sleepProbability=0.0f; sleepProbability<1.01f; sleepProbability+=0.1f) {
       PagerankOptions<T> p = {1,      false, sleepProbability, sleepDurationMs, damping, Li, tolerance};
       PagerankOptions<T> o = {repeat, false, sleepProbability, sleepDurationMs, damping, Li, tolerance};
       // Find pagerank using a single thread for reference (unordered, no dead ends).
@@ -41,19 +41,19 @@ void runPagerank(const G& x, const H& xt, int repeat) {
       // Find pagerank accelerated with OpenMP (unordered, no dead ends).
       auto a1 = pagerankMonolithicOmp<false, false>(x, xt, init, o);
       auto e1 = l1NormOmp(a1.ranks, a0.ranks);
-      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankOmpUnordered       {tol_norm: Li, tolerance: %.0e}\n", a1.time, a1.iterations, e1, tolerance);
+      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankOmpUnordered       {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a1.time, a1.iterations, e1, sleepProbability, sleepDurationMs);
       // Find pagerank accelerated with OpenMP (ordered, no dead ends).
       auto a2 = pagerankMonolithicOmp<true, false>(x, xt, init, o);
       auto e2 = l1NormOmp(a2.ranks, a0.ranks);
-      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankOmpOrdered         {tol_norm: Li, tolerance: %.0e}\n", a2.time, a2.iterations, e2, tolerance);
+      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankOmpOrdered         {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a2.time, a2.iterations, e2, sleepProbability, sleepDurationMs);
       // Find pagerank with barrier-free iterations accelerated with OpenMP (ordered, no dead ends, full error).
       auto a3 = pagerankMonolithicBarrierfreeOmp<true, false, true>(x, xt, init, o);
       auto e3 = l1NormOmp(a3.ranks, a0.ranks);
-      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankBarrierfreeFullOmp {tol_norm: Li, tolerance: %.0e}\n", a3.time, a3.iterations, e3, tolerance);
+      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankBarrierfreeFullOmp {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a3.time, a3.iterations, e3, sleepProbability, sleepDurationMs);
       // Find pagerank with barrier-free iterations accelerated with OpenMP (ordered, no dead ends, partial error).
       auto a4 = pagerankMonolithicBarrierfreeOmp<true, false, false>(x, xt, init, o);
       auto e4 = l1NormOmp(a4.ranks, a0.ranks);
-      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankBarrierfreePartOmp {tol_norm: Li, tolerance: %.0e}\n", a4.time, a4.iterations, e4, tolerance);
+      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankBarrierfreePartOmp {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a4.time, a4.iterations, e4, sleepProbability, sleepDurationMs);
     }
   }
 }

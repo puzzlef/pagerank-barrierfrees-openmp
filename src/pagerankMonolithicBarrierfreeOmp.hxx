@@ -20,7 +20,7 @@ using std::min;
 // -------------
 
 template <bool O, bool D, class K, class T, bool F=false>
-int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, K i, K n, K N, T p, T E, int L, int EF, K EI=K(), K EN=K()) {
+int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, vector<default_random_engine*>& rnds, K i, K n, K N, T p, T E, int L, int EF, float SP, int SD, K EI=K(), K EN=K()) {
   float l = 0;
   if (!O) return 0;
   if (F) EI = 0;
@@ -32,7 +32,7 @@ int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>&
   for (int t=0; t<TS; t++) {
     K    i1 = i+t*DN, I1 = min(i1+DN, i+n), n1 = max(I1-i1, K(0));
     if  (n1==0) continue;
-    int  l1 = pagerankMonolithicSeqLoopU<O, D>(a, r, c, f, vfrom, efrom, vdata, i1, n1, N, p, E, L, EF, EI, EN);
+    int  l1 = pagerankMonolithicSeqLoopU<O, D>(a, r, c, f, vfrom, efrom, vdata, rnds[t], i1, n1, N, p, E, L, EF, SP, SD, EI, EN);
     l += l1 * float(n1)/n;
   }
   return int(l + 0.5f);

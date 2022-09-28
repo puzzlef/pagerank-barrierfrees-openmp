@@ -1,8 +1,45 @@
 #pragma once
-#include <random>
 #include <vector>
+#include <random>
+#include <thread>
+#include <chrono>
 
+using std::vector;
+using std::random_device;
+using std::default_random_engine;
 using std::uniform_real_distribution;
+using std::this_thread::sleep_for;
+using std::chrono::duration;
+
+
+
+
+// RANDOM-ENGINES
+// --------------
+
+auto defaultRandomEngines(int n) {
+  vector<random_device*> devs;
+  vector<default_random_engine*> rnds;
+  for (int i=0; i<n; ++i) {
+    devs.push_back(new random_device());
+    rnds.push_back(new default_random_engine((*devs.back())()));
+  }
+  return rnds;
+}
+
+
+
+
+// RANDOM-SLEEP-FOR
+// ----------------
+
+template <class REP, class PERIOD, class T, class R>
+inline bool randomSleepFor(const duration<REP, PERIOD>& duration, T probability, R& rnd) {
+  uniform_real_distribution<T> dis(T(0), T(1));
+  if (dis(rnd) >= probability) return false;
+  sleep_for(duration);
+  return true;
+}
 
 
 
