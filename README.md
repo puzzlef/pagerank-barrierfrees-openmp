@@ -133,6 +133,7 @@ $ ...
 
 [![](https://i.imgur.com/K4dU43e.jpg)](https://www.youtube.com/watch?v=GMT18TMNQbY)<br>
 [![ORG](https://img.shields.io/badge/org-puzzlef-green?logo=Org)](https://puzzlef.github.io)
+[![DOI](https://zenodo.org/badge/542447553.svg)](https://zenodo.org/badge/latestdoi/542447553)
 
 
 [(1)]: https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.38.5427
