@@ -1,7 +1,5 @@
-Effect of using different values of tolerance with barrier-free iterations in
+Effect of varying amounts of random thread sleep with barrier-free iterations in
 [OpenMP]-based ordered [PageRank algorithm] for [link analysis].
-
-`TODO`
 
 **Unordered PageRank** is the *standard* approach of PageRank computation (as
 described in the original paper by Larry Page et al. [(1)]), where *two*
@@ -20,29 +18,34 @@ iteration. This minimizes unnecessary waits and allows each thread to be on a
 *different iteration number* (which may or may not be beneficial for convergence)
 [(3)].
 
-In this experiment, we perform two diffrent approaches of barrier-free
-iterations of *OpenMP-based ordered PageRank*; one in which each thread detects
-convergence by measuring the difference between the previous and the current
-ranks of all the vertices (**full**), and the other in which the difference is
-measured between the previous and current ranks of only the subset of vertices
-being processed by each thread (**part**). This is done while adjusting the
-tolerance `τ` from `10^-1` to `10^-14` with three different tolerance functions:
-`L1-norm`, `L2-norm`, and `L∞-norm`. We also compare it with OpenMP-based
-unordered and ordered PageRank for the same tolerance and tolerance function. We
-use a damping factor of `α = 0.85` and limit the maximum number of iterations to
-`L = 500`. The error between the approaches is calculated with *L1-norm*. The
+In this experiment, we seek to observe the effect of random thread sleeps on the
+performance of different approaches of PageRank computation. Sleep can occur
+before computing that rank of any vertex (in an iteration) with a certain
+probability. This sleep probability is varied from `0.0` to `1.0` in steps of
+`0.1`. We also adjust the duration of each sleep from `1 ms` to `1000 ms`. We
+perform two different approaches of barrier-free iterations of *OpenMP-based*
+*ordered PageRank*; one in which each thread detects convergence by measuring the
+difference between the previous and the current ranks of all the vertices
+(**full**), and the other in which the difference is measured between the
+previous and current ranks of only the subset of vertices being processed by
+each thread (**part**). We compare them with OpenMP-based unordered and ordered
+PageRank. We use a damping factor of `α = 0.85`, a tolerance of `τ = 10^-10`,
+and limit the maximum number of iterations to `L = 500`. Convergence of ranks is
+determined based of `L∞-norm` between the ranks of the previous and the current
+iteration. The error between the approaches is calculated with *L1-norm*. The
 *sequential unordered* approach is considered to be the *gold standard* (wrt to
-which error is measured). *Dead ends* in the graph are handled by always
-teleporting any vertex in the graph at random (*teleport* approach [(4)]). The
-teleport contribution to all vertices is calculated *once* (for all vertices) at
-the begining of each iteration.
+which error is measured). *Dead ends* in the graph are handled by adding
+self-loops to all vertices in the graph (*loopall* approach [(4)]).
 
-From the results, we observe that the **partial-error based barrier-free**
-**PageRank** is **faster than full-error version**, but generally has **similar**
-**performance as that of standard OpenMP-based PageRank (unordered, ordered)**,
-although it **requires the fewest iterations to converge**. However the,
-**partial barrier-free approach** also **generally yields greater error in**
-**ranks** (with respect to sequential unordered approach).
+From the results, we observe the following. **OpenMP-based unordered PageRank**
+is **always faster or the same performance** as barrier-free (partial/full error
+measurement) PageRank. A **random thread sleep with low probability** (`0.1`)
+**can significantly increase the time required for convergence**, but increasing
+this sleep probability does not significantly affect the convergence time
+further. With respect to the **number of iterations**, **OpenMP-based**
+**unordered/ordered approaches** are **not impacted at all by random thread**
+**sleeps**, but barrier-free approaches and are affected (usually peaking at sleep
+probability 0.1 and dropping and the probability increases).
 
 All outputs are saved in a [gist] and a small part of the output is listed here.
 Some [charts] are also included below, generated from [sheets]. The input data
@@ -63,50 +66,53 @@ $ ...
 # order: 281903 size: 2594400 [directed] {} (selfLoopAllVertices)
 # order: 281903 size: 2594400 [directed] {} (transposeWithDegree)
 # OMP_NUM_THREADS=12
-# [00004.980 ms; 004 iters.] [0.0000e+00 err.] pagerankOmpUnordered       {tol_norm: L1, tolerance: 1e-01}
-# [00007.029 ms; 004 iters.] [7.2516e-02 err.] pagerankOmpOrdered         {tol_norm: L1, tolerance: 1e-01}
-# [00007.962 ms; 003 iters.] [6.1728e-02 err.] pagerankBarrierfreeFullOmp {tol_norm: L1, tolerance: 1e-01}
-# [00003.015 ms; 001 iters.] [3.6976e-01 err.] pagerankBarrierfreePartOmp {tol_norm: L1, tolerance: 1e-01}
-# [00009.053 ms; 009 iters.] [0.0000e+00 err.] pagerankOmpUnordered       {tol_norm: L1, tolerance: 1e-02}
-# [00012.224 ms; 008 iters.] [2.0893e-02 err.] pagerankOmpOrdered         {tol_norm: L1, tolerance: 1e-02}
-# [00015.114 ms; 008 iters.] [2.1312e-02 err.] pagerankBarrierfreeFullOmp {tol_norm: L1, tolerance: 1e-02}
-# [00006.250 ms; 003 iters.] [1.0583e-01 err.] pagerankBarrierfreePartOmp {tol_norm: L1, tolerance: 1e-02}
+# [00139.434 ms; 092 iters.] [2.9434e-08 err.] pagerankOmpUnordered       {sleep_prob: 0.0, sleep_dur: 0001 ms}
+# [00202.637 ms; 087 iters.] [3.5569e-08 err.] pagerankOmpOrdered         {sleep_prob: 0.0, sleep_dur: 0001 ms}
+# [00213.090 ms; 090 iters.] [3.5820e-08 err.] pagerankBarrierfreeFullOmp {sleep_prob: 0.0, sleep_dur: 0001 ms}
+# [00157.038 ms; 068 iters.] [6.3337e-08 err.] pagerankBarrierfreePartOmp {sleep_prob: 0.0, sleep_dur: 0001 ms}
+# [00143.502 ms; 092 iters.] [2.9434e-08 err.] pagerankOmpUnordered       {sleep_prob: 0.1, sleep_dur: 0001 ms}
+# [00203.554 ms; 087 iters.] [3.5567e-08 err.] pagerankOmpOrdered         {sleep_prob: 0.1, sleep_dur: 0001 ms}
+# [00200.269 ms; 080 iters.] [3.7927e-08 err.] pagerankBarrierfreeFullOmp {sleep_prob: 0.1, sleep_dur: 0001 ms}
+# [00159.348 ms; 068 iters.] [6.5084e-08 err.] pagerankBarrierfreePartOmp {sleep_prob: 0.1, sleep_dur: 0001 ms}
+# [00144.523 ms; 092 iters.] [2.9434e-08 err.] pagerankOmpUnordered       {sleep_prob: 0.2, sleep_dur: 0001 ms}
+# [00204.447 ms; 087 iters.] [3.5567e-08 err.] pagerankOmpOrdered         {sleep_prob: 0.2, sleep_dur: 0001 ms}
+# [00207.622 ms; 079 iters.] [3.7733e-08 err.] pagerankBarrierfreeFullOmp {sleep_prob: 0.2, sleep_dur: 0001 ms}
+# [00173.303 ms; 068 iters.] [6.0156e-08 err.] pagerankBarrierfreePartOmp {sleep_prob: 0.2, sleep_dur: 0001 ms}
 # ...
-# [00385.129 ms; 500 iters.] [0.0000e+00 err.] pagerankOmpUnordered       {tol_norm: Li, tolerance: 1e-14}
-# [00132.396 ms; 098 iters.] [1.9295e-07 err.] pagerankOmpOrdered         {tol_norm: Li, tolerance: 1e-14}
-# [00170.530 ms; 108 iters.] [1.9585e-07 err.] pagerankBarrierfreeFullOmp {tol_norm: Li, tolerance: 1e-14}
-# [00123.138 ms; 094 iters.] [1.9663e-07 err.] pagerankBarrierfreePartOmp {tol_norm: Li, tolerance: 1e-14}
+# [00132.218 ms; 092 iters.] [2.9434e-08 err.] pagerankOmpUnordered       {sleep_prob: 0.0, sleep_dur: 0005 ms}
+# [00194.745 ms; 087 iters.] [3.5571e-08 err.] pagerankOmpOrdered         {sleep_prob: 0.0, sleep_dur: 0005 ms}
+# [00198.631 ms; 086 iters.] [3.6316e-08 err.] pagerankBarrierfreeFullOmp {sleep_prob: 0.0, sleep_dur: 0005 ms}
+# [00151.742 ms; 068 iters.] [6.3871e-08 err.] pagerankBarrierfreePartOmp {sleep_prob: 0.0, sleep_dur: 0005 ms}
+# [00181.450 ms; 092 iters.] [2.9434e-08 err.] pagerankOmpUnordered       {sleep_prob: 0.1, sleep_dur: 0005 ms}
+# [00233.075 ms; 087 iters.] [3.5567e-08 err.] pagerankOmpOrdered         {sleep_prob: 0.1, sleep_dur: 0005 ms}
+# [00249.260 ms; 081 iters.] [3.8378e-08 err.] pagerankBarrierfreeFullOmp {sleep_prob: 0.1, sleep_dur: 0005 ms}
+# [00200.137 ms; 070 iters.] [1.1288e-07 err.] pagerankBarrierfreePartOmp {sleep_prob: 0.1, sleep_dur: 0005 ms}
+# ...
+# [58360.914 ms; 092 iters.] [2.9434e-08 err.] pagerankOmpUnordered       {sleep_prob: 1.0, sleep_dur: 1000 ms}
+# [57011.207 ms; 087 iters.] [3.5569e-08 err.] pagerankOmpOrdered         {sleep_prob: 1.0, sleep_dur: 1000 ms}
+# [96603.320 ms; 089 iters.] [5.0634e-08 err.] pagerankBarrierfreeFullOmp {sleep_prob: 1.0, sleep_dur: 1000 ms}
+# [91684.117 ms; 082 iters.] [3.2389e-07 err.] pagerankBarrierfreePartOmp {sleep_prob: 1.0, sleep_dur: 1000 ms}
 #
 # Loading graph /home/subhajit/data/web-BerkStan.mtx ...
 # order: 685230 size: 7600595 [directed] {}
 # order: 685230 size: 8285825 [directed] {} (selfLoopAllVertices)
 # order: 685230 size: 8285825 [directed] {} (transposeWithDegree)
 # OMP_NUM_THREADS=12
-# [00008.499 ms; 004 iters.] [0.0000e+00 err.] pagerankOmpUnordered       {tol_norm: L1, tolerance: 1e-01}
-# [00009.376 ms; 004 iters.] [1.0193e-01 err.] pagerankOmpOrdered         {tol_norm: L1, tolerance: 1e-01}
-# [00013.724 ms; 004 iters.] [1.0509e-01 err.] pagerankBarrierfreeFullOmp {tol_norm: L1, tolerance: 1e-01}
-# [00004.638 ms; 001 iters.] [3.4068e-01 err.] pagerankBarrierfreePartOmp {tol_norm: L1, tolerance: 1e-01}
-# [00016.418 ms; 009 iters.] [0.0000e+00 err.] pagerankOmpUnordered       {tol_norm: L1, tolerance: 1e-02}
-# [00017.874 ms; 008 iters.] [2.9763e-02 err.] pagerankOmpOrdered         {tol_norm: L1, tolerance: 1e-02}
-# [00026.116 ms; 009 iters.] [2.8237e-02 err.] pagerankBarrierfreeFullOmp {tol_norm: L1, tolerance: 1e-02}
-# [00008.815 ms; 003 iters.] [1.0316e-01 err.] pagerankBarrierfreePartOmp {tol_norm: L1, tolerance: 1e-02}
+# [00242.956 ms; 089 iters.] [3.4431e-08 err.] pagerankOmpUnordered       {sleep_prob: 0.0, sleep_dur: 0001 ms}
+# [00260.992 ms; 093 iters.] [4.3849e-08 err.] pagerankOmpOrdered         {sleep_prob: 0.0, sleep_dur: 0001 ms}
+# [00287.529 ms; 096 iters.] [4.4476e-08 err.] pagerankBarrierfreeFullOmp {sleep_prob: 0.0, sleep_dur: 0001 ms}
+# [00193.964 ms; 071 iters.] [1.1348e-07 err.] pagerankBarrierfreePartOmp {sleep_prob: 0.0, sleep_dur: 0001 ms}
+# [00243.095 ms; 089 iters.] [3.4431e-08 err.] pagerankOmpUnordered       {sleep_prob: 0.1, sleep_dur: 0001 ms}
+# [00267.031 ms; 093 iters.] [4.3864e-08 err.] pagerankOmpOrdered         {sleep_prob: 0.1, sleep_dur: 0001 ms}
+# [00300.417 ms; 095 iters.] [4.3921e-08 err.] pagerankBarrierfreeFullOmp {sleep_prob: 0.1, sleep_dur: 0001 ms}
+# [00210.418 ms; 071 iters.] [1.1081e-07 err.] pagerankBarrierfreePartOmp {sleep_prob: 0.1, sleep_dur: 0001 ms}
 # ...
 ```
 
-[![](https://i.imgur.com/f2EYibQ.png)][sheetp]
-[![](https://i.imgur.com/L2Pqr8R.png)][sheetp]
-[![](https://i.imgur.com/lOJyiPG.png)][sheetp]
-[![](https://i.imgur.com/vdMuchv.png)][sheetp]
-
-[![](https://i.imgur.com/hJUfY4I.png)][sheetp]
-[![](https://i.imgur.com/LT5Yt1v.png)][sheetp]
-[![](https://i.imgur.com/Pouaonx.png)][sheetp]
-[![](https://i.imgur.com/f0xSHPU.png)][sheetp]
-
-[![](https://i.imgur.com/oXne2DD.png)][sheetp]
-[![](https://i.imgur.com/4W2G1IV.png)][sheetp]
-[![](https://i.imgur.com/JgpwWjL.png)][sheetp]
-[![](https://i.imgur.com/lQ9u5u9.png)][sheetp]
+[![](https://i.imgur.com/U4RORcK.png)][sheetp]
+[![](https://i.imgur.com/0OGRgGS.png)][sheetp]
+[![](https://i.imgur.com/OrZ8uq0.png)][sheetp]
+[![](https://i.imgur.com/bCTjZu4.png)][sheetp]
 
 <br>
 <br>
@@ -125,9 +131,8 @@ $ ...
 <br>
 
 
-[![](https://i.imgur.com/6UYGStl.jpg)](https://www.youtube.com/watch?v=2k2orAjC4aw)<br>
+[![](https://i.imgur.com/K4dU43e.jpg)](https://www.youtube.com/watch?v=GMT18TMNQbY)<br>
 [![ORG](https://img.shields.io/badge/org-puzzlef-green?logo=Org)](https://puzzlef.github.io)
-[![DOI](https://zenodo.org/badge/532185741.svg)](https://zenodo.org/badge/latestdoi/532185741)
 
 
 [(1)]: https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.38.5427
@@ -141,7 +146,7 @@ $ ...
 [OpenMP]: https://en.wikipedia.org/wiki/OpenMP
 [PageRank algorithm]: https://en.wikipedia.org/wiki/PageRank
 [link analysis]: https://en.wikipedia.org/wiki/Network_theory#Link_analysis
-[gist]: https://gist.github.com/wolfram77/4e88175074a8b134cddcd76d5b1b3542
-[charts]: https://imgur.com/a/PjMk8zX
-[sheets]: https://docs.google.com/spreadsheets/d/1bIdZGAOHDXN3bCjasOPAjOZCpWaTQpgYlZYv6SKeRT4/edit?usp=sharing
-[sheetp]: https://docs.google.com/spreadsheets/d/e/2PACX-1vSo6nUPtx3ahAFElFW2bLjFiDWHCQ3NHLv_PuFaLjR-u7FySxlq54tdNdPveBEWw06WHODtl8HqJzUd/pubhtml
+[gist]: https://gist.github.com/wolfram77/ad0dc8fa38ef6719a93ea9b830ee9ca8
+[charts]: https://imgur.com/a/H7ICGOL
+[sheets]: https://docs.google.com/spreadsheets/d/1ZkTeBDk-pbQRoj9x8-EPge_Uo8BSVg0dkOiYUSgCyd4/edit?usp=sharing
+[sheetp]: https://docs.google.com/spreadsheets/d/e/2PACX-1vScCmQLPcsbW-Zlhf57BuJ50gu5h4zVFwWzwbmkvb2zQOciFuS-tIID3LKG-zbiKu0T3DKncha0IZof/pubhtml
