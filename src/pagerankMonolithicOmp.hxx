@@ -19,6 +19,7 @@ using std::swap;
 
 template <bool DEAD=false, bool SLEEP=false, bool HELP=false, class K, class T>
 int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, vector<PagerankThreadWork*>& works, K i, K n, K N, T p, T E, int L, int EF, float SP, int SD) {
+  PRINTFI("pagerankMonolithicOmpLoopU():\n");
   int l = 0;
   // 0. Reset thread works.
   for (int t=0; t<works.size(); ++t)
