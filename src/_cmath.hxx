@@ -1,10 +1,10 @@
 #pragma once
 #include <cmath>
-#include <random>
+#include <type_traits>
 
+using std::is_floating_point;
 using std::ceil;
 using std::sqrt;
-using std::uniform_int_distribution;
 
 
 
@@ -14,7 +14,7 @@ using std::uniform_int_distribution;
 // Similar to JavaScript coalescing || operator.
 
 template <class T>
-T coalesce(T x, T d=T()) {
+inline T coalesce(T x, T d=T()) {
   return x!=T()? x : d;
 }
 
@@ -26,11 +26,10 @@ T coalesce(T x, T d=T()) {
 // For kernel launch calculation.
 
 template <class T>
-T ceilDiv(T x, T y) { return (x + y-1) / y; }
-template <>
-float ceilDiv<float>(float x, float y) { return ceil(x/y); }
-template <>
-double ceilDiv<double>(double x, double y) { return ceil(x/y); }
+inline T ceilDiv(T x, T y) {
+  if (is_floating_point<T>::value) return ceil(x/y);
+  return (x + y-1) / y;
+}
 
 
 
@@ -40,7 +39,7 @@ double ceilDiv<double>(double x, double y) { return ceil(x/y); }
 // https://stackoverflow.com/a/4609795/1413259
 
 template <typename T>
-int sgn(T x) {
+inline int sgn(T x) {
   return (T() < x) - (x < T());
 }
 
@@ -80,18 +79,14 @@ bool isPrime(T x) {
   // 2. Multiples of 2, 3 not prime
   if (x % 2==0 || x % 3==0) return false;
   // 3. Factor of 6k-1 or 6k+1 => not prime
-  for (T i=6, I=sqrt(x)+1; i<=I; i+=6)
+  for (T i=6, I=T(sqrt(x))+1; i<=I; i+=6)
     if (x % (i-1)==0 || x % (i+1)==0) return false;
   return true;
 }
 
 
-template <class T, class R>
-T randomPrime(T begin, T end, R& rnd) {
-  uniform_int_distribution<T> dis(begin, end);
-  for (int i=128; i>0; --i) {
-    T a = dis(rnd);
-    if (isPrime(a)) return a;
-  }
-  return end-1;
+template <class T>
+T nextPrime(T x) {
+  while (true)
+    if (isPrime(++x)) return x;
 }
