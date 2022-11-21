@@ -38,7 +38,7 @@ int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const v
   PRINTFI("[%09.3f ms] iterations_end\n",  durationMilliseconds(tstart));
   PERFORMI({
     for (int t=0; t<works.size(); ++t)
-      PRINTFI("[thread %02d] status {processed=%zu, stolen=%zu, slept=%zu}\n", works[t]->processedCount, works[t]->stolenCount, works[t]->sleptCount);
+      PRINTFI("[thread %02d] status {processed=%zu, stolen=%zu, slept=%zu}\n", t, works[t]->processedCount, works[t]->stolenCount, works[t]->sleptCount);
   });
   return l;
 }
