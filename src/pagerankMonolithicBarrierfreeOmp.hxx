@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <algorithm>
+#include <omp.h>
 #include "_main.hxx"
 #include "transpose.hxx"
 #include "dynamic.hxx"
@@ -24,21 +25,34 @@ int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>&
   for (int t=0; t<works.size(); ++t)
     works[t]->clear();
   // 1. Perform iterations.
+  auto tstart = timeNow();
+  PRINTFI("[%09.3f ms] parallel_out_begin\n", durationMilliseconds(tstart));
   #pragma omp parallel
   {
     int l = 0;
     vector<T> *rp = &r;
     vector<T> *ap = ONE? &r : &a;
+    int t = omp_get_thread_num();
+    PagerankThreadWork& me = *works[t];
+    PRINTFI("[%09.3f ms; thread %02d] parallel_begin\n",   durationMilliseconds(tstart), t);
+    PRINTFI("[%09.3f ms; thread %02d] iterations_begin\n", durationMilliseconds(tstart), t);
     while (l<L) {
       T c0 = DEAD? pagerankTeleportBarrierfreeOmp(*rp, vdata, N, p) : (1-p)/N;
-      if (HELP) pagerankCalculateHelperBarrierfreeOmpW<SLEEP>(*ap, *rp, f, vfrom, efrom, i, n, c0, SP, SD, works);
-      else      pagerankCalculateBarrierfreeOmpW<SLEEP>      (*ap, *rp, f, vfrom, efrom, i, n, c0, SP, SD, works);  // update ranks of vertices
+      if (HELP) pagerankCalculateHelperBarrierfreeOmpW<SLEEP>(*ap, *rp, f, vfrom, efrom, i, n, c0, SP, SD, works, tstart);
+      else      pagerankCalculateBarrierfreeOmpW<SLEEP>      (*ap, *rp, f, vfrom, efrom, i, n, c0, SP, SD, works, tstart);  // update ranks of vertices
       T el = pagerankErrorBarrierfreeOmp(works);  // compare previous and current ranks
       swap(ap, rp); ++l;                          // final ranks in (r)
       if (el<E) break;                            // check tolerance
     }
     if (l>ls) ls = l;
+    PRINTFI("[%09.3f ms; thread %02d] iterations_end\n", durationMilliseconds(tstart), t);
+    PRINTFI("[%09.3f ms; thread %02d] parallel_end\n",   durationMilliseconds(tstart), t);
   }
+  PRINTFI("[%09.3f ms] parallel_out_end\n", durationMilliseconds(tstart));
+  PERFORMI({
+    for (int t=0; t<works.size(); ++t)
+      PRINTFI("[thread %02d] status {processed=%zu, stolen=%zu, slept=%zu}\n", works[t]->processedCount, works[t]->stolenCount, works[t]->sleptCount);
+  });
   if (!ONE && (ls & 1)==1) swap(a, r);
   return ls;
 }

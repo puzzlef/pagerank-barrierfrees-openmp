@@ -20,15 +20,26 @@ using std::swap;
 template <bool DEAD=false, bool SLEEP=false, bool HELP=false, class K, class T>
 int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, vector<PagerankThreadWork*>& works, K i, K n, K N, T p, T E, int L, int EF, float SP, int SD) {
   int l = 0;
+  // 0. Reset thread works.
+  for (int t=0; t<works.size(); ++t)
+    works[t]->clear();
+  // 1. Perform iterations.
+  auto tstart = timeNow();
+  PRINTFI("[%09.3f ms] iterations_begin\n", durationMilliseconds(tstart));
   while (l<L) {
     T c0 = DEAD? pagerankTeleportOmp(r, vdata, N, p) : (1-p)/N;
-    if (HELP) pagerankCalculateHelperOmpW<SLEEP>(a, c, vfrom, efrom, i, n, c0, SP, SD, works);
-    else pagerankCalculateOmpW<SLEEP>(a, c, vfrom, efrom, i, n, c0, SP, SD, works);  // update ranks of vertices
+    if (HELP) pagerankCalculateHelperOmpW<SLEEP>(a, c, vfrom, efrom, i, n, c0, SP, SD, works, tstart);
+    else      pagerankCalculateOmpW<SLEEP>      (a, c, vfrom, efrom, i, n, c0, SP, SD, works, tstart);  // update ranks of vertices
     multiplyValuesOmpW(c, a, f, i, n);        // update partial contributions (c)
     T el = pagerankErrorOmp(a, r, i, n, EF);  // compare previous and current ranks
     swap(a, r); ++l;                          // final ranks in (r)
     if (el<E) break;                          // check tolerance
   }
+  PRINTFI("[%09.3f ms] iterations_end\n",  durationMilliseconds(tstart));
+  PERFORMI({
+    for (int t=0; t<works.size(); ++t)
+      PRINTFI("[thread %02d] status {processed=%zu, stolen=%zu, slept=%zu}\n", works[t]->processedCount, works[t]->stolenCount, works[t]->sleptCount);
+  });
   return l;
 }
 

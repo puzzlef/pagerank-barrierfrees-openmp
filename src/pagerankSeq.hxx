@@ -119,31 +119,37 @@ T pagerankTeleport(const vector<T>& r, const vector<K>& vdata, K N, T p) {
 // ------------------
 // For rank calculation from in-edges.
 
-template <bool SLEEP=false, class K, class T, class R>
-inline T pagerankCalculateRankDeltaW(vector<T>& a, const vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K v, T c0, double sp, milliseconds sd, R& rnd) {
-  if (SLEEP) randomSleepFor(sd, sp, rnd);
+template <bool SLEEP=false, class K, class T, class TP>
+inline T pagerankCalculateRankDeltaW(vector<T>& a, const vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K v, T c0, double sp, milliseconds sd, PagerankThreadWork *work, const TP& tstart, int t) {
+  auto fb = [&]() { PRINTFI("[%09.3f ms; thread %02d] sleep_begin", durationMilliseconds(tstart), t); ++work->sleptCount; };
+  auto fe = [&]() { PRINTFI("[%09.3f ms; thread %02d] sleep_end",   durationMilliseconds(tstart), t); };
+  if (SLEEP) randomSleepFor(sd, sp, work->rnd, fb, fe);
   T rv = r[v], av = c0;
   for (K i=vfrom[v], I=vfrom[v+1]; i<I; ++i) {
     K u = efrom[i];
     av += r[u]*f[u];
   }
   a[v] = av;
+  ++work->processedCount;
   return av - rv;
 }
 
-template <bool SLEEP=false, class K, class T, class R>
-inline void pagerankCalculateRankW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K v, T c0, double sp, milliseconds sd, R& rnd) {
-  if (SLEEP) randomSleepFor(sd, sp, rnd);
+template <bool SLEEP=false, class K, class T, class TP>
+inline void pagerankCalculateRankW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K v, T c0, double sp, milliseconds sd, PagerankThreadWork *work, const TP& tstart, int t) {
+  auto fb = [&]() { PRINTFI("[%09.3f ms; thread %02d] sleep_begin", durationMilliseconds(tstart), t); ++work->sleptCount; };
+  auto fe = [&]() { PRINTFI("[%09.3f ms; thread %02d] sleep_end",   durationMilliseconds(tstart), t); };
+  if (SLEEP) randomSleepFor(sd, sp, work->rnd, fb, fe);
   a[v] = c0 + sumValuesAt(c, sliceIterable(efrom, vfrom[v], vfrom[v+1]));
+  ++work->processedCount;
 }
 
 
-template <bool SLEEP=false, class K, class T>
-void pagerankCalculateW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, PagerankThreadWork *work) {
+template <bool SLEEP=false, class K, class T, class TP>
+void pagerankCalculateW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, PagerankThreadWork *work, const TP& tstart, int t) {
   double sp = double(SP)/n;
   milliseconds sd(SD);
   for (K v=i; v<i+n; v++)
-    pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, v, c0, sp, sd, work->rnd);
+    pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, v, c0, sp, sd, work, tstart, t);
 }
 
 

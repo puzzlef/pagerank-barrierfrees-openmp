@@ -33,12 +33,17 @@ auto defaultRandomEngines(int n) {
 // RANDOM-SLEEP-FOR
 // ----------------
 
-template <class REP, class PERIOD, class T, class R>
-inline bool randomSleepFor(const duration<REP, PERIOD>& duration, T probability, R& rnd) {
+template <class REP, class PERIOD, class T, class R, class FB, class FE>
+inline bool randomSleepFor(const duration<REP, PERIOD>& duration, T probability, R& rnd, FB fb, FE fe) {
   uniform_real_distribution<T> dis(T(0), T(1));
   if (dis(rnd) >= probability) return false;
-  sleep_for(duration);
+  fb(); sleep_for(duration); fe();
   return true;
+}
+template <class REP, class PERIOD, class T, class R>
+inline bool randomSleepFor(const duration<REP, PERIOD>& duration, T probability, R& rnd) {
+  auto fn = []() {};
+  return randomSleepFor(duration, probability, rnd, fn, fn);
 }
 
 

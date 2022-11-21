@@ -106,15 +106,18 @@ struct PagerankThreadWork {
   volatile bool   stolen;     // indicates if a thread has stolen work
   atomic<size_t>  begin;      // vertex being processed
   atomic<size_t>  end;        // 1 + last vertex to be processed
+  size_t processedCount;      // number of vertices processed by this thread
+  size_t stolenCount;         // number of times this thread has stolen
+  size_t sleptCount;          // number of times this thread has slept
 
   PagerankThreadWork(size_t begin=0, size_t end=0) :
-  dev(), rnd(dev()), iteration(0), error(1), stolen(false), begin(begin), end(end) {}
+  dev(), rnd(dev()), iteration(0), error(1), stolen(false), begin(begin), end(end), processedCount(0), stolenCount(0), sleptCount(0) {}
 
   inline size_t size() const { return end -  begin; }
   inline bool empty()  const { return end <= begin; }
   inline void updateRange(size_t _begin, size_t _end) { begin = _begin; end = _end; }
   inline void clearRange() { stolen = false; begin = 0; end = 0; }
-  inline void clear()      { iteration = 0;  error = 1; clearRange(); }
+  inline void clear()      { iteration = 0;  error = 1; clearRange(); processedCount = 0; stolenCount = 0; sleptCount = 0; }
 };
 
 

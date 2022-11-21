@@ -68,31 +68,36 @@ T pagerankTeleportBarrierfreeOmp(const vector<T>& r, const vector<K>& vdata, K N
 // ------------------
 // For rank calculation from in-edges.
 
-template <bool SLEEP=false, class K, class T>
-void pagerankCalculateOmpW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, vector<PagerankThreadWork*>& works) {
+template <bool SLEEP=false, class K, class T, class TP>
+void pagerankCalculateOmpW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, vector<PagerankThreadWork*>& works, const TP& tstart) {
   double sp = double(SP)/n;
   milliseconds sd(SD);
-  #pragma omp parallel for schedule(dynamic, 2048)
-  for (K v=i; v<i+n; v++) {
+  PRINTFI("[%09.3f ms] parallel_out_begin\n", durationMilliseconds(tstart));
+  #pragma omp parallel
+  {
     int t = omp_get_thread_num();
-    pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, v, c0, sp, sd, works[t]->rnd);
+    PRINTFI("[%09.3f ms; thread %02d] parallel_begin\n", durationMilliseconds(tstart), t);
+    #pragma omp for schedule(dynamic, 2048) nowait
+    for (K v=i; v<i+n; v++)
+      pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, v, c0, sp, sd, works[t], tstart, t);
+    PRINTFI("[%09.3f ms; thread %02d] parallel_end\n", durationMilliseconds(tstart), t);
   }
+  PRINTFI("[%09.3f ms] parallel_out_end\n", durationMilliseconds(tstart));
 }
 
 
-template <bool SLEEP=false, class K, class T>
-void pagerankCalculateBarrierfreeOmpW(vector<T>& a, const vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, vector<PagerankThreadWork*>& works) {
+template <bool SLEEP=false, class K, class T, class TP>
+void pagerankCalculateBarrierfreeOmpW(vector<T>& a, const vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, vector<PagerankThreadWork*>& works, const TP& tstart) {
   double sp = double(SP)/n;
   milliseconds sd(SD);
   double err = 0;
   int t = omp_get_thread_num();
-  PagerankThreadWork& me = *works[t];
   #pragma omp for schedule(dynamic, 2048) nowait
   for (K v=i; v<i+n; v++) {
-    T e = pagerankCalculateRankDeltaW<SLEEP>(a, r, f, vfrom, efrom, v, c0, sp, sd, me.rnd);
+    T e = pagerankCalculateRankDeltaW<SLEEP>(a, r, f, vfrom, efrom, v, c0, sp, sd, works[t], tstart, t);
     err = max(err, e);  // li-norm
   }
-  me.error = err;
+  works[t]->error = err;
 }
 
 
@@ -123,6 +128,7 @@ inline bool pagerankStealWork(PagerankThreadWork& me, PagerankThreadWork& victim
   if (!victim.end.compare_exchange_strong(end, ALL? size_t(victim.begin) : begin)) return false;
   victim.stolen = true;
   me.updateRange(begin, end);
+  ++me.stolenCount;
   return true;
 }
 
@@ -145,8 +151,8 @@ inline bool pagerankStealWorkIfSlow(PagerankThreadWork& me, PagerankThreadWork& 
 }
 
 
-template <bool SLEEP=false, class K, class T>
-void pagerankCalculateHelperOmpW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, vector<PagerankThreadWork*>& works) {
+template <bool SLEEP=false, class K, class T, class TP>
+void pagerankCalculateHelperOmpW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, vector<PagerankThreadWork*>& works, const TP& tstart) {
   const int chunkSize = 2048;
   const int stealSize = chunkSize/4;
   double sp = double(SP)/n;
@@ -154,22 +160,24 @@ void pagerankCalculateHelperOmpW(vector<T>& a, const vector<T>& c, const vector<
   // 0. Reset thread works.
   for (int i=0; i<works.size(); ++i)
     works[i]->clearRange();
+  PRINTFI("[%09.3f ms] parallel_out_begin\n", durationMilliseconds(tstart));
   #pragma omp parallel
   {
     int t = omp_get_thread_num();
     PagerankThreadWork& me = *works[t];
+    PRINTFI("[%09.3f ms; thread %02d] parallel_begin\n", durationMilliseconds(tstart), t);
     // 1. Perform work assigned to me.
     #pragma omp for schedule(dynamic, 2048) nowait
     for (K v=i; v<i+n; ++v) {
       if (me.stolen)  continue;
       if (me.empty()) me.updateRange(v, min(v+chunkSize, i+n));
-      pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, v, c0, sp, sd, me.rnd);
+      pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, v, c0, sp, sd, &me, tstart, t);
       ++me.begin;
     }
     while (true) {
       // 2. Perform remaining/stolen work.
       while (!me.empty())
-        pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, K(me.begin++), c0, sp, sd, me.rnd);
+        pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, K(me.begin++), c0, sp, sd, &me, tstart, t);
       // 3. Find a busy thread (victim), who has work.
       int b = pagerankBusyThread(works, me.rnd);
       if (b<0) break;
@@ -177,16 +185,18 @@ void pagerankCalculateHelperOmpW(vector<T>& a, const vector<T>& c, const vector<
       PagerankThreadWork& victim = *works[b];
       if (pagerankStealWorkSize(me, victim, stealSize)) continue;
       pagerankStealWorkIfSlow<true>(me, victim, 1, [&](size_t begin) {  // or if stuck
-        pagerankCalculateRankW(a, c, vfrom, efrom, K(begin), c0, sp, sd, me.rnd);
+        pagerankCalculateRankW(a, c, vfrom, efrom, K(begin), c0, sp, sd, &me, tstart, t);
         sleep_for(microseconds(4));
       });
     }
+    PRINTFI("[%09.3f ms; thread %02d] parallel_end\n", durationMilliseconds(tstart), t);
   }
+  PRINTFI("[%09.3f ms] parallel_out_end\n", durationMilliseconds(tstart));
 }
 
 
-template <bool SLEEP=false, class K, class T>
-void pagerankCalculateHelperBarrierfreeOmpW(vector<T>& a, const vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, vector<PagerankThreadWork*>& works) {
+template <bool SLEEP=false, class K, class T, class TP>
+void pagerankCalculateHelperBarrierfreeOmpW(vector<T>& a, const vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, vector<PagerankThreadWork*>& works, const TP& tstart) {
   const int chunkSize = 2048;
   const int stealSize = chunkSize/4;
   double sp = double(SP)/n;
@@ -202,14 +212,14 @@ void pagerankCalculateHelperBarrierfreeOmpW(vector<T>& a, const vector<T>& r, co
   for (K v=i; v<i+n; ++v) {
     if (me.stolen)  continue;
     if (me.empty()) me.updateRange(v, min(v+chunkSize, i+n));
-    T e = pagerankCalculateRankDeltaW<SLEEP>(a, r, f, vfrom, efrom, v, c0, sp, sd, me.rnd);
+    T e = pagerankCalculateRankDeltaW<SLEEP>(a, r, f, vfrom, efrom, v, c0, sp, sd, &me, tstart, t);
     err = max(err, e);  // li-norm
     ++me.begin;
   }
   while (true) {
     // 2. Perform remaining/stolen work.
     while (!me.empty()) {
-      T e = pagerankCalculateRankDeltaW<SLEEP>(a, r, f, vfrom, efrom, K(me.begin++), c0, sp, sd, me.rnd);
+      T e = pagerankCalculateRankDeltaW<SLEEP>(a, r, f, vfrom, efrom, K(me.begin++), c0, sp, sd, &me, tstart, t);
       err = max(err, e);  // li-norm
     }
     // 3. Find a busy thread (victim), who has work.
@@ -219,7 +229,7 @@ void pagerankCalculateHelperBarrierfreeOmpW(vector<T>& a, const vector<T>& r, co
     PagerankThreadWork& victim = *works[b];
     if (pagerankStealWorkSize(me, victim, stealSize)) continue;
     pagerankStealWorkIfSlow<true>(me, victim, 1, [&](size_t begin) {  // or if stuck
-      T e = pagerankCalculateRankDeltaW(a, r, f, vfrom, efrom, K(begin), c0, sp, sd, me.rnd);
+      T e = pagerankCalculateRankDeltaW(a, r, f, vfrom, efrom, K(begin), c0, sp, sd, &me, tstart, t);
       err = max(err, e);  // li-norm
       sleep_for(microseconds(4));
     });

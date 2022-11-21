@@ -19,9 +19,10 @@ using std::swap;
 template <bool DEAD=false, bool SLEEP=false, class K, class T>
 int pagerankMonolithicSeqLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, const vector<K>& vdata, PagerankThreadWork *work, K i, K n, K N, T p, T E, int L, int EF, float SP, int SD) {
   int l = 0;
+  auto tstart = timeNow();
   while (l<L) {
     T c0 = DEAD? pagerankTeleport(r, vdata, N, p) : (1-p)/N;
-    pagerankCalculateW<SLEEP>(a, c, vfrom, efrom, i, n, c0, SP, SD, work);  // update ranks of vertices
+    pagerankCalculateW<SLEEP>(a, c, vfrom, efrom, i, n, c0, SP, SD, work, tstart, 0);  // update ranks of vertices
     multiplyValuesW(c, a, f, i, n);        // update partial contributions (c)
     T el = pagerankError(a, r, i, n, EF);  // compare previous and current ranks
     swap(a, r); ++l;                       // final ranks in (r)
