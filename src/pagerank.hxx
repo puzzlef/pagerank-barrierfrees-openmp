@@ -109,15 +109,17 @@ struct PagerankThreadWork {
   size_t processedCount;      // number of vertices processed by this thread
   size_t stolenCount;         // number of times this thread has stolen
   size_t sleptCount;          // number of times this thread has slept
+  float  blockedTime;         // total time in ms this thread was blocked in join
+  float  blockedStartTime;    // start time in ms when thread was blocked
 
   PagerankThreadWork(size_t begin=0, size_t end=0) :
-  dev(), rnd(dev()), iteration(0), error(1), stolen(false), begin(begin), end(end), processedCount(0), stolenCount(0), sleptCount(0) {}
+  dev(), rnd(dev()), iteration(0), error(1), stolen(false), begin(begin), end(end), processedCount(0), stolenCount(0), sleptCount(0), blockedTime(0), blockedStartTime(0) {}
 
   inline size_t size() const { return end -  begin; }
   inline bool empty()  const { return end <= begin; }
   inline void updateRange(size_t _begin, size_t _end) { begin = _begin; end = _end; }
   inline void clearRange() { stolen = false; begin = 0; end = 0; }
-  inline void clear()      { iteration = 0;  error = 1; clearRange(); processedCount = 0; stolenCount = 0; sleptCount = 0; }
+  inline void clear()      { iteration = 0;  error = 1; clearRange(); processedCount = 0; stolenCount = 0; sleptCount = 0; blockedTime = 0; blockedStartTime = 0; }
 };
 
 

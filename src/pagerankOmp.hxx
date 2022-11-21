@@ -72,17 +72,21 @@ template <bool SLEEP=false, class K, class T, class TP>
 void pagerankCalculateOmpW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, vector<PagerankThreadWork*>& works, const TP& tstart) {
   double sp = double(SP)/n;
   milliseconds sd(SD);
-  PRINTFI("[%09.3f ms] parallel_out_begin\n", durationMilliseconds(tstart));
+  PRINTFT("[%09.3f ms] parallel_out_begin\n", durationMilliseconds(tstart));
   #pragma omp parallel
   {
     int t = omp_get_thread_num();
-    PRINTFI("[%09.3f ms; thread %02d] parallel_begin\n", durationMilliseconds(tstart), t);
+    PRINTFT("[%09.3f ms; thread %02d] parallel_begin\n", durationMilliseconds(tstart), t);
     #pragma omp for schedule(dynamic, 2048) nowait
     for (K v=i; v<i+n; v++)
       pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, v, c0, sp, sd, works[t], tstart, t);
-    PRINTFI("[%09.3f ms; thread %02d] parallel_end\n", durationMilliseconds(tstart), t);
+    float msparend = works[t]->blockedStartTime = durationMilliseconds(tstart);
+    PRINTFT("[%09.3f ms; thread %02d] parallel_end\n", msparend, t);
   }
-  PRINTFI("[%09.3f ms] parallel_out_end\n", durationMilliseconds(tstart));
+  float msparoutend = durationMilliseconds(tstart);
+  PRINTFT("[%09.3f ms] parallel_out_end\n", msparoutend);
+  for (int t=0; t<works.size(); ++t)
+    works[t]->blockedTime += msparoutend - works[t]->blockedStartTime;
 }
 
 
@@ -160,12 +164,12 @@ void pagerankCalculateHelperOmpW(vector<T>& a, const vector<T>& c, const vector<
   // 0. Reset thread works.
   for (int i=0; i<works.size(); ++i)
     works[i]->clearRange();
-  PRINTFI("[%09.3f ms] parallel_out_begin\n", durationMilliseconds(tstart));
+  PRINTFT("[%09.3f ms] parallel_out_begin\n", durationMilliseconds(tstart));
   #pragma omp parallel
   {
     int t = omp_get_thread_num();
     PagerankThreadWork& me = *works[t];
-    PRINTFI("[%09.3f ms; thread %02d] parallel_begin\n", durationMilliseconds(tstart), t);
+    PRINTFT("[%09.3f ms; thread %02d] parallel_begin\n", durationMilliseconds(tstart), t);
     // 1. Perform work assigned to me.
     #pragma omp for schedule(dynamic, 2048) nowait
     for (K v=i; v<i+n; ++v) {
@@ -189,9 +193,13 @@ void pagerankCalculateHelperOmpW(vector<T>& a, const vector<T>& c, const vector<
         sleep_for(microseconds(4));
       });
     }
-    PRINTFI("[%09.3f ms; thread %02d] parallel_end\n", durationMilliseconds(tstart), t);
+    float msparend = me.blockedStartTime = durationMilliseconds(tstart);
+    PRINTFT("[%09.3f ms; thread %02d] parallel_end\n", msparend, t);
   }
-  PRINTFI("[%09.3f ms] parallel_out_end\n", durationMilliseconds(tstart));
+  float msparoutend = durationMilliseconds(tstart);
+  PRINTFT("[%09.3f ms] parallel_out_end\n", msparoutend);
+  for (int t=0; t<works.size(); ++t)
+    works[t]->blockedTime += msparoutend - works[t]->blockedStartTime;
 }
 
 

@@ -26,7 +26,7 @@ int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>&
     works[t]->clear();
   // 1. Perform iterations.
   auto tstart = timeNow();
-  PRINTFI("[%09.3f ms] parallel_out_begin\n", durationMilliseconds(tstart));
+  PRINTFT("[%09.3f ms] parallel_out_begin\n", durationMilliseconds(tstart));
   #pragma omp parallel
   {
     int l = 0;
@@ -34,8 +34,8 @@ int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>&
     vector<T> *ap = ONE? &r : &a;
     int t = omp_get_thread_num();
     PagerankThreadWork& me = *works[t];
-    PRINTFI("[%09.3f ms; thread %02d] parallel_begin\n",   durationMilliseconds(tstart), t);
-    PRINTFI("[%09.3f ms; thread %02d] iterations_begin\n", durationMilliseconds(tstart), t);
+    PRINTFT("[%09.3f ms; thread %02d] parallel_begin\n",   durationMilliseconds(tstart), t);
+    PRINTFT("[%09.3f ms; thread %02d] iterations_begin\n", durationMilliseconds(tstart), t);
     while (l<L) {
       T c0 = DEAD? pagerankTeleportBarrierfreeOmp(*rp, vdata, N, p) : (1-p)/N;
       if (HELP) pagerankCalculateHelperBarrierfreeOmpW<SLEEP>(*ap, *rp, f, vfrom, efrom, i, n, c0, SP, SD, works, tstart);
@@ -45,14 +45,16 @@ int pagerankMonolithicBarrierfreeOmpLoopU(vector<T>& a, vector<T>& r, vector<T>&
       if (el<E) break;                            // check tolerance
     }
     if (l>ls) ls = l;
-    PRINTFI("[%09.3f ms; thread %02d] iterations_end\n", durationMilliseconds(tstart), t);
-    PRINTFI("[%09.3f ms; thread %02d] parallel_end\n",   durationMilliseconds(tstart), t);
+    float msparend = works[t]->blockedStartTime = durationMilliseconds(tstart);
+    PRINTFT("[%09.3f ms; thread %02d] iterations_end\n", msparend, t);
+    PRINTFT("[%09.3f ms; thread %02d] parallel_end\n",   msparend, t);
   }
-  PRINTFI("[%09.3f ms] parallel_out_end\n", durationMilliseconds(tstart));
-  PERFORMI({
-    for (int t=0; t<works.size(); ++t)
-      PRINTFI("[thread %02d] status {processed=%zu, stolen=%zu, slept=%zu}\n", t, works[t]->processedCount, works[t]->stolenCount, works[t]->sleptCount);
-  });
+  float msparoutend = durationMilliseconds(tstart);
+  PRINTFT("[%09.3f ms] parallel_out_end\n", msparoutend);
+  for (int t=0; t<works.size(); ++t)
+    works[t]->blockedTime += msparoutend - works[t]->blockedStartTime;
+  for (int t=0; t<works.size(); ++t)
+    PRINTFI("[thread %02d] status {processed=%zu, stolen=%zu, slept=%zu, blocked=%.3f ms}\n", t, works[t]->processedCount, works[t]->stolenCount, works[t]->sleptCount, works[t]->blockedTime);
   if (!ONE && (ls & 1)==1) swap(a, r);
   return ls;
 }

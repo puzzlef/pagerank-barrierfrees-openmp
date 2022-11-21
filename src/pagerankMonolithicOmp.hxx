@@ -25,7 +25,7 @@ int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const v
     works[t]->clear();
   // 1. Perform iterations.
   auto tstart = timeNow();
-  PRINTFI("[%09.3f ms] iterations_begin\n", durationMilliseconds(tstart));
+  PRINTFT("[%09.3f ms] iterations_begin\n", durationMilliseconds(tstart));
   while (l<L) {
     T c0 = DEAD? pagerankTeleportOmp(r, vdata, N, p) : (1-p)/N;
     if (HELP) pagerankCalculateHelperOmpW<SLEEP>(a, c, vfrom, efrom, i, n, c0, SP, SD, works, tstart);
@@ -35,11 +35,9 @@ int pagerankMonolithicOmpLoopU(vector<T>& a, vector<T>& r, vector<T>& c, const v
     swap(a, r); ++l;                          // final ranks in (r)
     if (el<E) break;                          // check tolerance
   }
-  PRINTFI("[%09.3f ms] iterations_end\n",  durationMilliseconds(tstart));
-  PERFORMI({
-    for (int t=0; t<works.size(); ++t)
-      PRINTFI("[thread %02d] status {processed=%zu, stolen=%zu, slept=%zu}\n", t, works[t]->processedCount, works[t]->stolenCount, works[t]->sleptCount);
-  });
+  PRINTFT("[%09.3f ms] iterations_end\n",  durationMilliseconds(tstart));
+  for (int t=0; t<works.size(); ++t)
+    PRINTFI("[thread %02d] status {processed=%zu, stolen=%zu, slept=%zu, blocked=%.3f ms}\n", t, works[t]->processedCount, works[t]->stolenCount, works[t]->sleptCount, works[t]->blockedTime);
   return l;
 }
 
