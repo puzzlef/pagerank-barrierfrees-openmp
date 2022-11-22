@@ -12,6 +12,19 @@ const RRESLT = /^\[(.+?) ms; (.+?) iters\.\] \[(.+?) err\.\] (\w+)(?:\s+\{sleep_
 
 
 
+// UTILITY
+// -------
+
+function arraySum(x) {
+  var a = 0;
+  for (var v of x)
+    a += v;
+  return a;
+}
+
+
+
+
 // *-FILE
 // ------
 
@@ -44,6 +57,22 @@ function writeCsv(pth, rows) {
 
 // *-LOG
 // -----
+
+function blankRowCount(datum) {
+  var a = 0;
+  for (var i=datum.length-1; i>=0; --i) {
+    if (datum[i].technique) break;
+    ++a;
+  }
+  return a;
+}
+
+function correctedTime(datum, time, repeat) {
+  var B = blankRowCount(datum), db = Math.ceil(B / repeat), maxs = [];
+  for (var i=datum.length-B; i<datum.length; i+=db)
+    maxs.push(Math.max(...datum.slice(i, i+db).map(x => x.blocked_time)));
+  return time - arraySum(maxs)/maxs.length;
+}
 
 function readLogLine(ln, data, state) {
   if (RGRAPH.test(ln)) {
@@ -90,10 +119,12 @@ function readLogLine(ln, data, state) {
       sleep_probability: parseFloat(sleep_probability || '0'),
       sleep_duration:    parseFloat(sleep_duration    || '0'),
     };
-    var xdata = data.get(state.graph);
-    for (var i=xdata.length-1; i>=0; --i) {
-      if (xdata[i].technique) break;
-      Object.assign(xdata[i], result);
+    if (!result.technique.includes('Barrierfree')) result.corrected_time = result.time;
+    else result.corrected_time = correctedTime(data.get(state.graph), result.time, state.repeat);
+    var datum = data.get(state.graph);
+    for (var i=datum.length-1; i>=0; --i) {
+      if (datum[i].technique) break;
+      Object.assign(datum[i], result);
     }
     state.repeat = 0;
     state.thread = 0;
