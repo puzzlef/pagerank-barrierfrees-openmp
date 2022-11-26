@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-src="pagerank-helper-openmp-with-sleep-tracked"
+src="pagerank-barrierfree-openmp"
 out="/home/resources/Documents/subhajit/$src.log"
 ulimit -s unlimited
 printf "" > "$out"
