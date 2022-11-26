@@ -1,86 +1,14 @@
 #pragma once
-#include <vector>
 #include <algorithm>
-#include <chrono>
+#include <vector>
 #include "_main.hxx"
 #include "vertices.hxx"
 #include "edges.hxx"
 #include "csr.hxx"
-#include "dynamic.hxx"
-#include "random.hxx"
 #include "pagerank.hxx"
 
 using std::vector;
-using std::chrono::milliseconds;
 using std::swap;
-
-
-
-
-// PAGERANK-VERTICES
-// -----------------
-
-template <class G, class H, class T>
-auto pagerankVertices(const G& x, const H& xt, const PagerankOptions<T>& o, const PagerankData<G> *D=nullptr) {
-  using K = typename G::key_type;
-  if (!o.splitComponents) return vertexKeys(xt);
-  return joinValuesVector(componentsD(x, xt, D));
-}
-
-
-template <class G, class H, class T>
-auto pagerankDynamicVertices(const G& x, const H& xt, const G& y, const H& yt, const PagerankOptions<T>& o, const PagerankData<G> *D=nullptr) {
-  using K = typename G::key_type;
-  if (!o.splitComponents) return dynamicInVertices(x, xt, y, yt);
-  const auto& cs = componentsD(y, yt, D);
-  const auto& b  = blockgraphD(y, cs, D);
-  auto [is, n] = dynamicInComponentIndices(x, xt, y, yt, cs, b);
-  auto ks = joinAtVector<K>(cs, sliceIterable(is, 0, n)); size_t nv = ks.size();
-  joinAtU(ks, cs, sliceIterable(is, n));
-  return make_pair(ks, nv);
-}
-
-
-
-
-// PAGERANK-COMPONENTS
-// -------------------
-
-template <class G, class H, class T>
-auto pagerankComponents(const G& x, const H& xt, const PagerankOptions<T>& o, const PagerankData<G> *D=nullptr) {
-  using K = typename G::key_type;
-  if (!o.splitComponents) return vector2d<K> {vertexKeys(xt)};
-  return componentsD(x, xt, D);
-}
-
-
-template <class G, class H>
-auto pagerankDynamicComponentsDefault(const G& x, const H& xt, const G& y, const H& yt) {
-  using K = typename G::key_type;
-  vector2d<K> a;
-  auto [ks, n] = dynamicInVertices(x, xt, y, yt);
-  a.push_back(vector<K>(ks.begin(), ks.begin()+n));
-  a.push_back(vector<K>(ks.begin()+n, ks.end()));
-  return make_pair(a, size_t(1));
-}
-
-template <class G, class H, class T>
-auto pagerankDynamicComponentsSplit(const G& x, const H& xt, const G& y, const H& yt, const PagerankOptions<T>& o, const PagerankData<G> *D=nullptr) {
-  using K = typename G::key_type;
-  const auto& cs = componentsD(y, yt, D);
-  const auto& b  = blockgraphD(y, cs, D);
-  auto [is, n] = dynamicInComponentIndices(x, xt, y, yt, cs, b);
-  vector2d<K> a;
-  for (auto i : is)
-    a.push_back(cs[i]);
-  return make_pair(a, n);
-}
-
-template <class G, class H, class T>
-auto pagerankDynamicComponents(const G& x, const H& xt, const G& y, const H& yt, const PagerankOptions<T>& o, const PagerankData<G> *D=nullptr) {
-  if (o.splitComponents) return pagerankDynamicComponentsSplit(x, xt, y, yt, o, D);
-  return pagerankDynamicComponentsDefault(x, xt, y, yt);
-}
 
 
 
@@ -89,11 +17,19 @@ auto pagerankDynamicComponents(const G& x, const H& xt, const G& y, const H& yt,
 // ---------------
 // For contribution factors of vertices (unchanging).
 
-template <class K, class T>
-void pagerankFactorW(vector<T>& a, const vector<K>& vdata, K i, K n, T p) {
-  for (K u=i; u<i+n; u++) {
-    K  d = vdata[u];
-    a[u] = d>0? p/d : 0;
+/**
+ * Calculate rank scaling factor for each vertex.
+ * @param a rank scaling factor for each vertex (output)
+ * @param vdeg out-degree of each vertex
+ * @param P damping factor [0.85]
+ * @param i vertex start
+ * @param n vertex count
+ */
+template <class K, class V>
+void pagerankFactor(vector<V>& a, const vector<K>& vdeg, V P, K i, K n) {
+  for (K u=i; u<i+n; ++u) {
+    K  d = vdeg[u];
+    a[u] = d>0? P/d : 0;
   }
 }
 
@@ -104,11 +40,19 @@ void pagerankFactorW(vector<T>& a, const vector<K>& vdata, K i, K n, T p) {
 // -----------------
 // For teleport contribution from vertices (inc. dead ends).
 
-template <class K, class T>
-T pagerankTeleport(const vector<T>& r, const vector<K>& vdata, K N, T p) {
-  T a = (1-p)/N;
-  for (K u=0; u<N; u++)
-    if (vdata[u] == 0) a += p*r[u]/N;
+/**
+ * Find total teleport contribution from each vertex (inc. deade ends).
+ * @param r rank of each vertex
+ * @param vdeg out-degree of each vertex
+ * @param P damping factor [0.85]
+ * @param N total number of vertices
+ * @returns common teleport rank contribution to each vertex
+ */
+template <class K, class V>
+V pagerankTeleport(const vector<V>& r, const vector<K>& vdeg, V P, K N) {
+  V a = (1-P)/N;
+  for (K u=0; u<N; ++u)
+    if (vdeg[u]==0) a += P * r[u]/N;
   return a;
 }
 
@@ -119,37 +63,60 @@ T pagerankTeleport(const vector<T>& r, const vector<K>& vdata, K N, T p) {
 // ------------------
 // For rank calculation from in-edges.
 
-template <bool SLEEP=false, class K, class T, class TP>
-inline T pagerankCalculateRankDeltaW(vector<T>& a, const vector<T>& r, const vector<T>& f, const vector<K>& vfrom, const vector<K>& efrom, K v, T c0, double sp, milliseconds sd, PagerankThreadWork *work, const TP& tstart, int t) {
-  auto fb = [&]() { PRINTFT("[%09.3f ms; thread %02d] sleep_begin", durationMilliseconds(tstart), t); ++work->sleptCount; };
-  auto fe = [&]() { PRINTFT("[%09.3f ms; thread %02d] sleep_end",   durationMilliseconds(tstart), t); };
-  if (SLEEP) randomSleepFor(sd, sp, work->rnd, fb, fe);
-  T rv = r[v], av = c0;
-  for (K i=vfrom[v], I=vfrom[v+1]; i<I; ++i) {
-    K u = efrom[i];
-    av += r[u]*f[u];
+/**
+ * Calculate rank for a given vertex.
+ * @param a current rank of each vertex (output)
+ * @param c rank contribution from each vertex
+ * @param xv edge offsets for each vertex in the graph
+ * @param xe target vertices for each edge in the graph
+ * @param v given vertex
+ * @param C0 common teleport rank contribution to each vertex
+ */
+template <class K, class V>
+inline void pagerankCalculateRank(vector<V>& a, const vector<V>& c, const vector<size_t>& xv, const vector<K>& xe, K v, V C0) {
+  a[v] = C0 + sumValuesAt(c, sliceIterable(xe, xv[v], xv[v+1]));
+}
+
+
+/**
+ * Calculate rank for a given vertex, and get the change in rank value.
+ * @param a current rank of each vertex (output)
+ * @param r previous rank of each vertex
+ * @param f rank scaling factor for each vertex
+ * @param xv edge offsets for each vertex in the graph
+ * @param xe target vertices for each edge in the graph
+ * @param v given vertex
+ * @param C0 common teleport rank contribution to each vertex
+ * @returns change between previous and current rank value
+ */
+template <class K, class V>
+inline V pagerankCalculateRankDelta(vector<V>& a, const vector<V>& r, const vector<V>& f, const vector<size_t>& xv, const vector<K>& xe, K v, V C0) {
+  V av = C0, rv = r[v];
+  for (size_t i=xv[v], I=xv[v+1]; i<I; ++i) {
+    K u = xe[i];
+    av += r[u] * f[u];
   }
   a[v] = av;
-  ++work->processedCount;
   return av - rv;
 }
 
-template <bool SLEEP=false, class K, class T, class TP>
-inline void pagerankCalculateRankW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K v, T c0, double sp, milliseconds sd, PagerankThreadWork *work, const TP& tstart, int t) {
-  auto fb = [&]() { PRINTFT("[%09.3f ms; thread %02d] sleep_begin", durationMilliseconds(tstart), t); ++work->sleptCount; };
-  auto fe = [&]() { PRINTFT("[%09.3f ms; thread %02d] sleep_end",   durationMilliseconds(tstart), t); };
-  if (SLEEP) randomSleepFor(sd, sp, work->rnd, fb, fe);
-  a[v] = c0 + sumValuesAt(c, sliceIterable(efrom, vfrom[v], vfrom[v+1]));
-  ++work->processedCount;
-}
 
-
-template <bool SLEEP=false, class K, class T, class TP>
-void pagerankCalculateW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom, const vector<K>& efrom, K i, K n, T c0, float SP, int SD, PagerankThreadWork *work, const TP& tstart, int t) {
-  double sp = double(SP)/n;
-  milliseconds sd(SD);
-  for (K v=i; v<i+n; v++)
-    pagerankCalculateRankW<SLEEP>(a, c, vfrom, efrom, v, c0, sp, sd, work, tstart, t);
+/**
+ * Calculate ranks for vertices in a graph.
+ * @param a current rank of each vertex (output)
+ * @param c rank contribution from each vertex
+ * @param xv edge offsets for each vertex in the graph
+ * @param xe target vertices for each edge in the graph
+ * @param C0 common teleport rank contribution to each vertex
+ * @param i vertex start
+ * @param n vertex count
+ * @param thread information on current thread (updated)
+ * @param fv per vertex processing (thread, vertex)
+ */
+template <class K, class V, class FV>
+void pagerankCalculateRanks(vector<V>& a, const vector<V>& c, const vector<size_t>& xv, const vector<K>& xe, V C0, K i, K n, ThreadInfo *thread, FV fv) {
+  for (K v=i; v<i+n; ++v)
+  { pagerankCalculateRank(a, c, xv, xe, v, C0); fv(thread, v); }
 }
 
 
@@ -159,44 +126,65 @@ void pagerankCalculateW(vector<T>& a, const vector<T>& c, const vector<K>& vfrom
 // --------------
 // For convergence check.
 
-template <class K, class T>
-T pagerankError(const vector<T>& x, const vector<T>& y, K i, K N, int EF) {
+/**
+ * Get the error between two rank vectors.
+ * @param x first rank vector
+ * @param y second rank vector
+ * @param EF error function (L1/L2/LI)
+ * @param i vertex start
+ * @param n vertex count
+ * @returns error between the two rank vectors
+ */
+template <class K, class V>
+inline V pagerankError(const vector<V>& x, const vector<V>& y, int EF, K i, K n) {
   switch (EF) {
-    case 1:  return l1Norm(x, y, i, N);
-    case 2:  return l2Norm(x, y, i, N);
-    default: return liNorm(x, y, i, N);
+    case 1:  return l1Norm(x, y, i, n);
+    case 2:  return l2Norm(x, y, i, n);
+    default: return liNorm(x, y, i, n);
   }
 }
 
 
 
 
-// PAGERANK
-// --------
-// For Monolithic / Componentwise PageRank.
+// PAGERANK-SEQ
+// ------------
+// For single-threaded (sequential) PageRank implementation.
 
-template <class H, class J, class M, class FL, class T=float>
-PagerankResult<T> pagerankSeq(const H& xt, const J& ks, size_t i, const M& ns, FL fl, const vector<T> *q, const PagerankOptions<T>& o) {
+/**
+ * Find the rank of each vertex in a graph.
+ * @param xt transpose of original graph
+ * @param q initial ranks
+ * @param o pagerank options
+ * @param ks vertices (keys) to process
+ * @param i vertex start
+ * @param ns vertex count(s)
+ * @param fl update loop
+ * @param fv per vertex processing (thread, vertex)
+ * @returns pagerank result
+ */
+template <bool ASYNC=false, class H, class V, class KS, class NS, class FL, class FV>
+PagerankResult<V> pagerankSeq(const H& xt, const vector<V> *q, const PagerankOptions<V>& o, const KS& ks, size_t i, const NS& ns, FL fl, FV fv) {
   using K  = typename H::key_type;
-  K     N  = xt.order();
-  T     p  = o.damping;
-  T     E  = o.tolerance;
-  int   L  = o.maxIterations, l = 0;
-  int   EF = o.toleranceNorm;
-  float SP = o.sleepProbability;
-  int   SD = o.sleepDurationMs;
-  auto vfrom = sourceOffsetsAs(xt, ks, K());
-  auto efrom = destinationIndicesAs(xt, ks, K());
-  auto vdata = vertexData(xt, ks);
-  auto works = pagerankThreadWorks(1);
-  vector<T> a(N), r(N), c(N), f(N), qc;
+  K   N  = xt.order();
+  V   P  = o.damping;
+  V   E  = o.tolerance;
+  int L  = o.maxIterations, l = 0;
+  int EF = o.toleranceNorm;
+  auto xv   = sourceOffsetsAs(xt, ks, size_t());
+  auto xe   = destinationIndicesAs(xt, ks, K());
+  auto vdeg = vertexData(xt, ks);
+  vector<ThreadInfo*> threads(1);
+  threads[0] = new ThreadInfo(0);
+  vector<int> e(N); vector<V> a(N), r(N), c(N), f(N), qc;
   if (q) qc = compressContainer(xt, *q, ks);
   float t = measureDuration([&]() {
-    if (q) copyValuesW(r, qc);   // copy old ranks (qc), if given
-    else fillValueU(r, T(1)/N);
-    pagerankFactorW(f, vdata, K(0), N, p); multiplyValuesW(c, r, f, 0, N);                // calculate factors (f) and contributions (c)
-    l = fl(a, r, c, f, vfrom, efrom, vdata, works[0], K(i), ns, N, p, E, L, EF, SP, SD);  // calculate ranks of vertices
+    fillValueU(e, 0);
+    if (q) copyValuesW(r, qc);
+    else   fillValueU (r, V(1)/N);
+    pagerankFactor(f, vdeg, P, K(), N); multiplyValuesW(c, r, f, 0, N);  // calculate factors (f) and contributions (c)
+    l = fl(e, ASYNC? r : a, r, c, f, xv, xe, vdeg, N, P, E, L, EF, K(i), ns, threads, fv);  // calculate ranks of vertices
   }, o.repeat);
-  forEach(works, [](PagerankThreadWork *w) { delete w; });
+  delete threads[0];
   return {decompressContainer(xt, r, ks), l, t};
 }

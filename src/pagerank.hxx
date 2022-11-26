@@ -1,15 +1,14 @@
 #pragma once
-#include <atomic>
-#include <vector>
 #include <utility>
 #include <random>
+#include <atomic>
+#include <vector>
 #include "_main.hxx"
-#include "components.hxx"
 
-using std::atomic;
-using std::vector;
 using std::random_device;
 using std::default_random_engine;
+using std::atomic;
+using std::vector;
 using std::move;
 
 
@@ -18,19 +17,24 @@ using std::move;
 // PAGERANK-OPTIONS
 // ----------------
 
-template <class T>
-struct PagerankOptions {
-  int   repeat;
-  bool  splitComponents;
-  float sleepProbability;
-  int   sleepDurationMs;
-  T     damping;
-  int   toleranceNorm;
-  T     tolerance;
-  int   maxIterations;
+enum NormFunction {
+  L0_NORM = 0,
+  L1_NORM = 1,
+  L2_NORM = 2,
+  LI_NORM = 3
+};
 
-  PagerankOptions(int repeat=1, bool splitComponents=false, float sleepProbability=0.0f, int sleepDurationMs=0, T damping=0.85, int toleranceNorm=1, T tolerance=1e-6, int maxIterations=500) :
-  repeat(repeat), splitComponents(splitComponents), sleepProbability(sleepProbability), sleepDurationMs(sleepDurationMs), damping(damping), toleranceNorm(toleranceNorm), tolerance(tolerance), maxIterations(maxIterations) {}
+
+template <class V>
+struct PagerankOptions {
+  int repeat;
+  int toleranceNorm;
+  V   tolerance;
+  V   damping;
+  int maxIterations;
+
+  PagerankOptions(int repeat=1, int toleranceNorm=LI_NORM, V tolerance=1e-10, V damping=0.85, int maxIterations=500) :
+  repeat(repeat), toleranceNorm(toleranceNorm), tolerance(tolerance), damping(damping), maxIterations(maxIterations) {}
 };
 
 
@@ -39,93 +43,35 @@ struct PagerankOptions {
 // PAGERANK-RESULT
 // ---------------
 
-template <class T>
+template <class V>
 struct PagerankResult {
-  vector<T> ranks;
+  vector<V> ranks;
   int   iterations;
   float time;
 
-  PagerankResult(vector<T>&& ranks, int iterations=0, float time=0) :
+  PagerankResult() :
+  ranks(), iterations(0), time(0) {}
+
+  PagerankResult(vector<V>&& ranks, int iterations=0, float time=0) :
   ranks(ranks), iterations(iterations), time(time) {}
 
-  PagerankResult(vector<T>& ranks, int iterations=0, float time=0) :
+  PagerankResult(vector<V>& ranks, int iterations=0, float time=0) :
   ranks(move(ranks)), iterations(iterations), time(time) {}
-
-
-  // Get initial ranks (when no vertices affected for dynamic pagerank).
-  template <class G>
-  static PagerankResult<T> initial(const G& x, const vector<T>* q=nullptr) {
-    int  N = x.order();
-    auto a = q? *q : createContainer(x, T());
-    if (!q) fillValueAtU(a, x.vertexKeys(), T(1)/N);
-    return {a, 0, 0};
-  }
 };
 
 
 
 
-// PAGERANK-DATA
-// -------------
-// Using Pagerank Data for performance!
+// THREAD-INFO
+// -----------
 
-template <class G>
-struct PagerankData {
-  using K = typename G::key_type;
-  vector2d<K> components;
-  G blockgraph;
-  G blockgraphTranspose;
-};
-
-template <class G, class K>
-auto blockgraphD(const G& x, const vector2d<K>& cs, const PagerankData<G> *D) {
-  return D? D->blockgraph : blockgraph(x, cs);
-}
-
-template <class G>
-auto blockgraphTransposeD(const G& b, const PagerankData<G> *D) {
-  return D? D->blockgraphTranspose : transpose(b);
-}
-
-template <class G, class H>
-auto componentsD(const G& x, const H& xt, const PagerankData<G> *D) {
-  return D? D->components : components(x, xt);
-}
-
-
-
-
-// PAGERANK-THREAD-WORK
-// --------------------
-
-struct PagerankThreadWork {
+struct ThreadInfo {
   random_device dev;          // used for random sleeps
   default_random_engine rnd;  // used for random sleeps
-  volatile int    iteration;  // current iteration
-  volatile double error;      // rank error wrt previous iteration for this thread
-  volatile bool   stolen;     // indicates if a thread has stolen work
-  atomic<size_t>  begin;      // vertex being processed
-  atomic<size_t>  end;        // 1 + last vertex to be processed
-  size_t processedCount;      // number of vertices processed by this thread
-  size_t stolenCount;         // number of times this thread has stolen
-  size_t sleptCount;          // number of times this thread has slept
-  float  blockedTime;         // total time in ms this thread was blocked in join
-  float  blockedStartTime;    // start time in ms when thread was blocked
+  int id;                     // thread number
+  int iteration;              // current iteration
 
-  PagerankThreadWork(size_t begin=0, size_t end=0) :
-  dev(), rnd(dev()), iteration(0), error(1), stolen(false), begin(begin), end(end), processedCount(0), stolenCount(0), sleptCount(0), blockedTime(0), blockedStartTime(0) {}
-
-  inline size_t size() const { return end -  begin; }
-  inline bool empty()  const { return end <= begin; }
-  inline void updateRange(size_t _begin, size_t _end) { begin = _begin; end = _end; }
-  inline void clearRange() { stolen = false; begin = 0; end = 0; }
-  inline void clear()      { iteration = 0;  error = 1; clearRange(); processedCount = 0; stolenCount = 0; sleptCount = 0; blockedTime = 0; blockedStartTime = 0; }
+  ThreadInfo(int id) :
+  dev(), rnd(dev()), id(id), iteration(0) {}
+  inline void clear() { iteration = 0; }
 };
-
-
-inline auto pagerankThreadWorks(int n) {
-  vector<PagerankThreadWork*> a;
-  for (int i=0; i<n; ++i)
-    a.push_back(new PagerankThreadWork());
-  return a;
-}
