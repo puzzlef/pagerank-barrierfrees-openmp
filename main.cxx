@@ -1,4 +1,7 @@
 #include <algorithm>
+#include <chrono>
+#include <random>
+#include <thread>
 #include <string>
 #include <vector>
 #include <cstdio>
@@ -30,7 +33,13 @@ void runPagerank(const G& x, const H& xt, int repeat) {
 
   for (int sleepDurationMs=1; sleepDurationMs<=1000; sleepDurationMs*=10) {
     for (float sleepProbability=0.0f; sleepProbability<1.01f; sleepProbability+=0.2f) {
-      auto fv = [&](ThreadInfo *thread, auto v) {};
+      chrono::milliseconds sd(sleepDurationMs);
+      float sp = sleepProbability / x.order();
+      // Do something (sleep) after processing each vertex.
+      auto  fv = [&](ThreadInfo *thread, auto v) {
+        uniform_real_distribution<float> dis(0.0f, 1.0f);
+        if (dis(thread->rnd) < sp) this_thread::sleep_for(sd);
+      };
       // Find sequential pagerank for reference (synchronous, no dead ends).
       auto a0 = pagerankBasicSeq(xt, init, {1});
       // Find multi-threaded pagerank (synchronous, no dead ends).
@@ -48,7 +57,7 @@ void runPagerank(const G& x, const H& xt, int repeat) {
 
 int main(int argc, char **argv) {
   char *file = argv[1];
-  int repeat = argc>2? stoi(argv[2]) : 1;
+  int repeat = argc>2? stoi(argv[2]) : 5;
   printf("Loading graph %s ...\n", file);
   OutDiGraph<int64_t> x;
   readMtxW(x, file); println(x);
