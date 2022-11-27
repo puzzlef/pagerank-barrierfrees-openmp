@@ -1,5 +1,4 @@
 #pragma once
-#define BUILD 3
 #include "_main.hxx"
 #include "Graph.hxx"
 #include "mtx.hxx"

@@ -96,10 +96,6 @@ inline bool pagerankBarrierfreeConverged(const vector<int>& e, K i, K n) {
 
 template <bool ASYNC=false, bool DEAD=false, class K, class V, class FV>
 int pagerankBarrierfreeOmpLoop(vector<int>& e, vector<V>& a, vector<V>& r, vector<V>& c, const vector<V>& f, const vector<size_t>& xv, const vector<K>& xe, const vector<K>& vdeg, K N, V P, V E, int L, int EF, K i, K n, vector<ThreadInfo*>& threads, FV fv) {
-  // Reset information on each thread
-  for (int t=0; t<threads.size(); ++t)
-    threads[t]->clear();
-  // Perform iterations
   if (EF!=LI_NORM) return 0;
   #pragma omp parallel
   {
@@ -111,6 +107,7 @@ int pagerankBarrierfreeOmpLoop(vector<int>& e, vector<V>& a, vector<V>& r, vecto
       if (!ASYNC) swap(a, r);                            // final ranks in (r)
       if (pagerankBarrierfreeConverged(e, i, n)) break;  // check tolerance
     }
+    threads[t]->stop = timeNow();
   }
   int l = 0;
   for (int t=0; t<threads.size(); ++t)

@@ -147,19 +147,20 @@ PagerankResult<V> pagerankOmp(const H& xt, const vector<V> *q, const PagerankOpt
   auto xv   = sourceOffsetsAs(xt, ks, size_t());
   auto xe   = destinationIndicesAs(xt, ks, K());
   auto vdeg = vertexData(xt, ks);
-  vector<ThreadInfo*> threads(TH);
-  for (int t=0; t<TH; ++t)
-    threads[t] = new ThreadInfo(t);
+  vector<ThreadInfo*> threads = threadInfos(TH);
   vector<int> e(N); vector<V> a(N), r(N), c(N), f(N), qc;
   if (q) qc = compressContainer(xt, *q, ks);
+  float tcorrected = 0;
   float t = measureDuration([&]() {
+    auto start = timeNow();
+    threadInfosClear(threads);
     fillValueU(e, 0);
     if (q) copyValuesOmpW(r, qc);
     else   fillValueOmpU (r, V(1)/N);
     pagerankFactorOmp(f, vdeg, P, K(), N); multiplyValuesOmpW(c, r, f, 0, N);  // calculate factors (f) and contributions (c)
     l = fl(e, ASYNC? r : a, r, c, f, xv, xe, vdeg, N, P, E, L, EF, K(i), ns, threads, fv);  // calculate ranks of vertices
+    tcorrected += threadInfosMinDurationMilliseconds(threads, start);
   }, o.repeat);
-  for (int t=0; t<TH; ++t)
-    delete threads[t];
-  return {decompressContainer(xt, r, ks), l, t};
+  threadInfosDelete(threads);
+  return {decompressContainer(xt, r, ks), l, t, tcorrected>0? tcorrected / o.repeat : t};
 }

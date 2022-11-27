@@ -39,10 +39,6 @@ using std::swap;
  */
 template <bool ASYNC=false, bool DEAD=false, class K, class V, class FV>
 int pagerankBasicOmpLoop(vector<int>& e, vector<V>& a, vector<V>& r, vector<V>& c, const vector<V>& f, const vector<size_t>& xv, const vector<K>& xe, const vector<K>& vdeg, K N, V P, V E, int L, int EF, K i, K n, vector<ThreadInfo*>& threads, FV fv) {
-  // Reset information on each thread
-  for (int t=0; t<threads.size(); ++t)
-    threads[t]->clear();
-  // Perform iterations
   int l = 0;
   while (l<L) {
     V C0 = DEAD? pagerankTeleportOmp(r, vdeg, P, N) : (1-P)/N;
