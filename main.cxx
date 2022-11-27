@@ -31,8 +31,8 @@ void runPagerank(const G& x, const H& xt, int repeat) {
   using V = TYPE;
   vector<V> *init = nullptr;
 
-  for (int sleepDurationMs=1; sleepDurationMs<=1000; sleepDurationMs*=10) {
-    for (float sleepProbability=0.0f; sleepProbability<1.01f; sleepProbability+=0.2f) {
+  for (int sleepDurationMs=10; sleepDurationMs<=10; sleepDurationMs*=10) {
+    for (float sleepProbability=1.0f; sleepProbability<1.01f; sleepProbability+=0.2f) {
       chrono::milliseconds sd(sleepDurationMs);
       float sp = sleepProbability / x.order();
       // Do something (sleep) after processing each vertex.
@@ -44,12 +44,14 @@ void runPagerank(const G& x, const H& xt, int repeat) {
       auto a0 = pagerankBasicSeq(xt, init, {1});
       // Find multi-threaded pagerank (synchronous, no dead ends).
       auto a1 = pagerankBasicOmp(xt, init, {repeat}, fv);
+      auto b1 = pagerankBasicSeq(xt, &a1.ranks, {1});
       auto e1 = l1NormOmp(a1.ranks, a0.ranks);
-      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankBasicOmp       {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a1.time, a1.iterations, e1, sleepProbability, sleepDurationMs);
+      printf("[%09.3f ms; %03d iters.] [%.4e err.; %03d early] pagerankBasicOmp       {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a1.time, a1.iterations, e1, b1.iterations-1, sleepProbability, sleepDurationMs);
       // Find multi-threaded barrier-free pagerank (asynchronous, no dead ends).
       auto a2 = pagerankBarrierfreeOmp<true>(xt, init, {repeat}, fv);
+      auto b2 = pagerankBasicSeq(xt, &a2.ranks, {1});
       auto e2 = l1NormOmp(a2.ranks, a0.ranks);
-      printf("[%09.3f ms; %03d iters.] [%.4e err.] pagerankBarrierfreeOmp {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a2.time, a2.iterations, e2, sleepProbability, sleepDurationMs);
+      printf("[%09.3f ms; %03d iters.] [%.4e err.; %03d early] pagerankBarrierfreeOmp {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a2.time, a2.iterations, e2, b2.iterations-1, sleepProbability, sleepDurationMs);
     }
   }
 }
