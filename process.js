@@ -5,7 +5,7 @@ const path = require('path');
 const RGRAPH = /^Loading graph .*\/(.+?)\.mtx \.\.\./m;
 const RORDER = /^order: (\d+) size: (\d+) \[directed\] \{\} \(transposeWithDegree\)$/m;
 const RTHRDS = /^OMP_NUM_THREADS=(\d+)/m;
-const RRESLT = /^\[(.+?) ms; (.+?) iters\.\] \[(.+?) err\.\] (\w+)(?:\s+\{sleep_prob: (.+?), sleep_dur: (\d+) ms\})?/m;
+const RRESLT = /^\[(.+?)\/(.+?) ms; (.+?) iters\.\] \[(.+?) err\.; (\d+) early\] (\w+)(?:\s+\{sleep_prob: (.+?), sleep_dur: (\d+) ms\})?/m;
 
 
 
@@ -59,11 +59,13 @@ function readLogLine(ln, data, state) {
     state.omp_num_threads   = parseFloat(omp_num_threads);
   }
   else if (RRESLT.test(ln)) {
-    var [, time, iterations, error, technique, sleep_probability, sleep_duration] = RRESLT.exec(ln);
+    var [, corrected_time, time, iterations, error, early_exit, technique, sleep_probability, sleep_duration] = RRESLT.exec(ln);
     data.get(state.graph).push(Object.assign({}, state, {
+      corrected_time:    parseFloat(corrected_time),
       time:              parseFloat(time),
       iterations:        parseFloat(iterations),
       error:             parseFloat(error),
+      early_exit:        parseFloat(early_exit),
       technique,
       sleep_probability: parseFloat(sleep_probability || '0'),
       sleep_duration:    parseFloat(sleep_duration    || '0'),
