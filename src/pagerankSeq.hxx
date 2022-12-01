@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <algorithm>
 #include <vector>
 #include "_main.hxx"
@@ -9,6 +10,7 @@
 
 using std::vector;
 using std::swap;
+using std::abs;
 
 
 
@@ -97,7 +99,7 @@ inline V pagerankCalculateRankDelta(vector<V>& a, const vector<V>& r, const vect
     av += r[u] * f[u];
   }
   a[v] = av;
-  return av - rv;
+  return abs(av - rv);
 }
 
 
