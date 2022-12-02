@@ -30,14 +30,16 @@ template <class G, class H>
 void runPagerank(const G& x, const H& xt, int repeat) {
   using V = TYPE;
   vector<V> *init = nullptr;
+  float sleepProbability = 0.2f;
 
   for (int sleepDurationMs=1; sleepDurationMs<=1000; sleepDurationMs*=10) {
-    for (float sleepProbability=0.0f; sleepProbability<1.01f; sleepProbability+=0.2f) {
+    for (int sleepingThreads=0; sleepingThreads<=MAX_THREADS; ++sleepingThreads) {
       chrono::milliseconds sd(sleepDurationMs);
       float sp = sleepProbability / x.order();
       // Do something (sleep) after processing each vertex.
       auto  fv = [&](ThreadInfo *thread, auto v) {
         uniform_real_distribution<float> dis(0.0f, 1.0f);
+        if (thread->id >= sleepingThreads) return;
         if (dis(thread->rnd) < sp) this_thread::sleep_for(sd);
       };
       // Find sequential pagerank for reference (synchronous, no dead ends).
@@ -46,12 +48,12 @@ void runPagerank(const G& x, const H& xt, int repeat) {
       auto a1 = pagerankBasicOmp(xt, init, {repeat}, fv);
       auto b1 = pagerankBasicSeq(xt, &a1.ranks, {1});
       auto e1 = l1NormOmp(a1.ranks, a0.ranks);
-      printf("[%09.3f/%09.3f ms; %03d iters.] [%.4e err.; %03d early] pagerankBasicOmp       {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a1.correctedTime, a1.time, a1.iterations, e1, b1.iterations-1, sleepProbability, sleepDurationMs);
+      printf("[%09.3f/%09.3f ms; %03d iters.] [%.4e err.; %03d early] pagerankBasicOmp       {sleep_th: %02d, sleep_dur: %04d ms}\n", a1.correctedTime, a1.time, a1.iterations, e1, b1.iterations-1, sleepingThreads, sleepDurationMs);
       // Find multi-threaded barrier-free pagerank (asynchronous, no dead ends).
       auto a2 = pagerankBarrierfreeOmp<true>(xt, init, {repeat}, fv);
       auto b2 = pagerankBasicSeq(xt, &a2.ranks, {1});
       auto e2 = l1NormOmp(a2.ranks, a0.ranks);
-      printf("[%09.3f/%09.3f ms; %03d iters.] [%.4e err.; %03d early] pagerankBarrierfreeOmp {sleep_prob: %.1f, sleep_dur: %04d ms}\n", a2.correctedTime, a2.time, a2.iterations, e2, b2.iterations-1, sleepProbability, sleepDurationMs);
+      printf("[%09.3f/%09.3f ms; %03d iters.] [%.4e err.; %03d early] pagerankBarrierfreeOmp {sleep_th: %02d, sleep_dur: %04d ms}\n", a2.correctedTime, a2.time, a2.iterations, e2, b2.iterations-1, sleepingThreads, sleepDurationMs);
     }
   }
 }
